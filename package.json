@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.ts",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "rimraf dist && tsc",
@@ -13,6 +14,12 @@
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@types/node": "^26.1.1",
