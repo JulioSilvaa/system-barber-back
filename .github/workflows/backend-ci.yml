@@ -4,17 +4,10 @@ on:
   push:
     branches:
       - develop
-    paths:
-      - "system-barber-back/**"
-      - ".github/workflows/backend-ci.yml"
-
   pull_request:
     branches:
       - develop
       - main
-    paths:
-      - "system-barber-back/**"
-      - ".github/workflows/backend-ci.yml"
 
 permissions:
   contents: read
@@ -29,7 +22,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: system-barber-back
+        working-directory: .
 
     steps:
       - uses: actions/checkout@v4
@@ -38,14 +31,19 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-          cache-dependency-path: system-barber-back/yarn.lock
+          cache-dependency-path: yarn.lock
 
-      - run: corepack enable
+      - name: Enable Corepack
+        run: corepack enable
 
-      - run: yarn install --frozen-lockfile
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
-      - run: yarn lint
+      - name: Lint
+        run: yarn lint
 
-      - run: yarn test --run
+      - name: Test
+        run: yarn test --run
 
-      - run: yarn build
+      - name: Build
+        run: yarn build
