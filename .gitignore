@@ -1,1 +1,12 @@
 node_modules
+/node_modules
+/plan
+/docs
+/coverage
+/src/generated/prisma
+.env
+!.env.build
+.env.local
+.env.*.local
+dist
+.env.test
