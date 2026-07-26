@@ -1,0 +1,34 @@
+export type ServiceProps = {
+  id: string;
+  barbershopId: string;
+  name: string;
+  priceCents: number;
+  durationMinutes: number;
+  isActive?: boolean;
+};
+
+export class Service {
+  public readonly id: string;
+  public readonly barbershopId: string;
+  public readonly name: string;
+  public readonly priceCents: number;
+  public readonly durationMinutes: number;
+  public readonly isActive: boolean;
+
+  constructor(props: ServiceProps) {
+    if (props.priceCents <= 0) {
+      throw new Error('price must be greater than zero');
+    }
+
+    if (props.durationMinutes <= 0) {
+      throw new Error('duration must be greater than zero');
+    }
+
+    this.id = props.id;
+    this.barbershopId = props.barbershopId;
+    this.name = props.name;
+    this.priceCents = props.priceCents;
+    this.durationMinutes = props.durationMinutes;
+    this.isActive = props.isActive ?? true;
+  }
+}

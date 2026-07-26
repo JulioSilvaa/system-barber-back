@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx src/interfaces/http/express/Express.ts",
     "build": "rimraf dist && tsc",
     "start": "node dist/server.js",
     "lint": "eslint .",
