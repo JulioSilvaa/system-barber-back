@@ -1,29 +1,29 @@
-import { describe, it, expect, beforeEach, vi, type Mocked } from "vitest";
-import CreateUserUseCase from "@/application/useCases/user/Create";
-import IUserRepository from "@/domain/repository/UserRepository";
-import IdGeneratorRepository from "@/domain/repository/IdGeneratorRepository";
-import HashRepository from "@/domain/repository/HashRepository";
-import { CreateUserInputDTO } from "@/application/dtos/UserDto";
-import User from "@/domain/entities/User";
+import { describe, it, expect, beforeEach, vi, type Mocked } from 'vitest';
+import CreateUserUseCase from '@/application/useCases/user/Create';
+import IUserRepository from '@/domain/repository/UserRepository';
+import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
+import HashRepository from '@/domain/repository/HashRepository';
+import { CreateUserInputDTO } from '@/application/dtos/UserDto';
+import User from '@/domain/entities/User';
 
-describe("CreateUserUseCase Unit Tests", () => {
+describe('CreateUserUseCase Unit Tests', () => {
   let userRepositoryMock: Mocked<IUserRepository>;
   let hashRepositoryMock: Mocked<HashRepository>;
   let idGeneratorMock: Mocked<IdGeneratorRepository>;
   let sut: CreateUserUseCase;
 
   // UUIDs v4 válidos
-  const VALID_USER_ID = "123e4567-e89b-41d3-a456-426614174000";
-  const VALID_BARBERSHOP_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+  const VALID_USER_ID = '123e4567-e89b-41d3-a456-426614174000';
+  const VALID_BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
   // Senha hasheada que satisfaz: Maiúscula + Minúscula + Número
-  const VALID_HASHED_PASSWORD = "HashedPassword123";
+  const VALID_HASHED_PASSWORD = 'HashedPassword123';
 
   const inputMock: CreateUserInputDTO = {
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "11999999999",
+    name: 'John Doe',
+    email: 'john@example.com',
+    phone: '11999999999',
     barbershopId: VALID_BARBERSHOP_ID,
-    password: "Password123",
+    password: 'Password123',
   };
 
   beforeEach(() => {
@@ -42,14 +42,10 @@ describe("CreateUserUseCase Unit Tests", () => {
       generate: vi.fn().mockReturnValue(VALID_USER_ID),
     } as unknown as Mocked<IdGeneratorRepository>;
 
-    sut = new CreateUserUseCase(
-      userRepositoryMock,
-      hashRepositoryMock,
-      idGeneratorMock
-    );
+    sut = new CreateUserUseCase(userRepositoryMock, hashRepositoryMock, idGeneratorMock);
   });
 
-  it("deve criar e salvar um usuário com sucesso", async () => {
+  it('deve criar e salvar um usuário com sucesso', async () => {
     const output = await sut.execute(inputMock);
 
     expect(output).toEqual({
@@ -68,12 +64,12 @@ describe("CreateUserUseCase Unit Tests", () => {
     expect(userRepositoryMock.save).toHaveBeenCalledWith(expect.any(User));
   });
 
-  it("deve passar uma string vazia para o hash caso a senha não seja informada", async () => {
+  it('deve passar uma string vazia para o hash caso a senha não seja informada', async () => {
     const inputWithoutPassword = { ...inputMock, password: undefined };
 
     await sut.execute(inputWithoutPassword as unknown as CreateUserInputDTO);
 
     // Garante que o use case repassou a string vazia para o serviço de hash
-    expect(hashRepositoryMock.hash).toHaveBeenCalledWith("");
+    expect(hashRepositoryMock.hash).toHaveBeenCalledWith('');
   });
 });
