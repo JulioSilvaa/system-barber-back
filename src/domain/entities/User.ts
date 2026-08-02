@@ -26,7 +26,7 @@ export default class User {
     this._barbershopId = props.barbershopId;
     this._name = props.name;
     this._phone = props.phone;
-    this._role = props.role ?? "BARBER";
+    this._role = props.role ?? 'BARBER';
     this._password = props?.password;
     this._isActive = props.isActive ?? true;
     this._email = props.email;
@@ -34,7 +34,7 @@ export default class User {
   }
 
   static create(props: UserProps): User {
-    return new User({ ...props, role: props.role ?? "BARBER" });
+    return new User({ ...props, role: props.role ?? 'BARBER' });
   }
 
   // ================= GETTERS =================
@@ -114,7 +114,6 @@ export default class User {
   }
 
   // ================= VALIDAÇÕES =================
-
 
   private validate(): void {
     this.validateName();
@@ -222,7 +221,9 @@ export default class User {
     const hasNumber = /[0-9]/.test(this._password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      throw new Error('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+      throw new Error(
+        'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      );
     }
   }
 }
