@@ -1,15 +1,20 @@
-import { User } from "@/domain/entities";
-import IUserRepository from "@/domain/repository/UserRepository";
+import { User } from '@/domain/entities';
+import IUserRepository from '@/domain/repository/UserRepository';
 
 export default class UserRepositoryMemory implements IUserRepository {
-  save(user: User): Promise<void> {
-    console.log("User saved in memory:", user);
-    return Promise.resolve();
+  private readonly users: User[] = [];
+
+  async save(user: User): Promise<void> {
+    this.users.push(user);
   }
-  findByEmail(email: string): Promise<User | null> {
-    throw new Error("Method not implemented.");
+
+  async findByEmail(email: string): Promise<User | null> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    return this.users.find(user => user.email.trim().toLowerCase() === normalizedEmail) ?? null;
   }
-  findById(id: string): Promise<User | null> {
-    throw new Error("Method not implemented.");
+
+  async findById(id: string): Promise<User | null> {
+    return this.users.find(user => user.id === id) ?? null;
   }
 }
