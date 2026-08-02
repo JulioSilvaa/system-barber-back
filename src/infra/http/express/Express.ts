@@ -6,16 +6,22 @@ import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import healthRouter from '../routes/healthRouter';
 
 const app = express();
 
 // --- Segurança e middlewares globais ---
 app.use(helmet());
-app.use(cors());
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: "http://localhost:3000", // Coloque o endereço exato do seu frontend
+  credentials: true, // 👈 Obrigatório para permitir o envio e recebimento de cookies
+}));
+
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -24,9 +30,7 @@ app.use(
 );
 
 // --- Health check ---
-app.get('/health', (_req: Request, res: Response) => {
-  return res.status(200).json({ status: 'ok', service: 'system-barber-api' });
-});
+app.use('/health', healthRouter);
 
 // --- Rotas de domínio ---
 // app.use('/api', barbershopRoutes);
@@ -45,6 +49,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 const PORT = process.env.PORT ?? 3333;
 
+
 const startServer = async () => {
   try {
     app.listen(PORT, () => {
@@ -56,5 +61,5 @@ const startServer = async () => {
   }
 };
 
-export { app };
+export default app;
 startServer();
