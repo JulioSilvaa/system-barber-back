@@ -5,9 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/infra/http/express/Express.ts",
-    "build": "rimraf dist && tsup src/infra/http/express/Express.ts --format esm --clean",
-    "start": "node dist/Express.js",
+    "dev": "tsx src/infra/http/express/server.ts",
+    "build": "rimraf dist && tsup src/infra/http/express/server.ts --format esm --clean",
+    "start": "node dist/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest",

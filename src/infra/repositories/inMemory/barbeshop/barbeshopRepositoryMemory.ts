@@ -2,23 +2,26 @@ import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 
 export default class BarbershopRepositoryMemory implements IBarbershopRepository {
-  findBySlug(slug: string): Promise<Barbershop | null> {
-    throw new Error('Method not implemented.');
+  private readonly barbershops: Barbershop[] = [];
+
+  async findBySlug(): Promise<Barbershop | null> {
+    return null;
   }
-  save(barbershop: Barbershop): Promise<Barbershop> {
-    throw new Error('Method not implemented.');
+
+  async save(barbershop: Barbershop): Promise<Barbershop> {
+    this.barbershops.push(barbershop);
+    return barbershop;
   }
-  private barbershops: Barbershop[] = [];
+
   async create(barbershop: Barbershop): Promise<void> {
     this.barbershops.push(barbershop);
   }
 
   async findById(id: string): Promise<Barbershop | null> {
-    const barbershop = this.barbershops.find(b => b.id === id);
-    return barbershop || null;
+    return this.barbershops.find(barbershop => barbershop.id === id) ?? null;
   }
 
   async findAll(): Promise<Barbershop[]> {
     return this.barbershops;
   }
-} 
+}

@@ -19,4 +19,4 @@ RUN npm install --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3333
-CMD ["node", "dist/Express.js"]
+CMD ["node", "dist/server.js"]

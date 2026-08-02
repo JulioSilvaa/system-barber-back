@@ -1,6 +1,5 @@
-import { Barbershop } from "@/domain/entities";
-import { IBarbershopRepository } from "@/domain/repository/BarbershopRepository";
-
+import { Barbershop } from '@/domain/entities';
+import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 
 export default class CreateBarberShopUseCase {
   private readonly _barbershopRepository: IBarbershopRepository;
@@ -16,14 +15,13 @@ export default class CreateBarberShopUseCase {
     // }
     // Lógica para criar um barbearia
 
-
     const newBarbershop = new Barbershop({
       id: input.id,
       name: input.name,
       slug: input.slug,
       phone: input.phone,
       isActive: input.isActive,
-      password: input.password
+      password: input.password,
     });
 
     await this._barbershopRepository.save(newBarbershop);

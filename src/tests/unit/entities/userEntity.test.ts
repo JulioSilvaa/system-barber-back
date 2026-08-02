@@ -21,9 +21,7 @@ describe('User Entity', () => {
 
       expect(user).toBeInstanceOf(User);
       expect(user.id).toBe('1');
-      expect(user.barbershopId).toBe(
-        '550e8400-e29b-41d4-a716-446655440000',
-      );
+      expect(user.barbershopId).toBe('550e8400-e29b-41d4-a716-446655440000');
       expect(user.name).toBe('Julio Silva');
       expect(user.phone).toBe('16999999999');
       expect(user.role).toBe('BARBER');
@@ -367,4 +365,3 @@ describe('User Entity', () => {
     });
   });
 });
-
