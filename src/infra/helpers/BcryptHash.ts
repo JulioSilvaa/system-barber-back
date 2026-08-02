@@ -1,7 +1,7 @@
-import HashRepository from "@/domain/repository/HashRepository";
-import bcrypt from "bcryptjs";
+import HashRepository from '@/domain/repository/HashRepository';
+import bcrypt from 'bcryptjs';
 
-export class BcryptHashService implements HashRepository {
+export default class BcryptHashService implements HashRepository {
   async hash(value: string): Promise<string> {
     return bcrypt.hash(value, Number(process.env.BCRYPT_SALT));
   }
