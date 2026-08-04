@@ -1,9 +1,12 @@
-import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
-import userController from '@/infra/http/controllers/UserController';
 import { Router } from 'express';
+import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
+import UserController from '../controllers/UserController';
 
-const router = Router();
+export default function createUserRoutes() {
+  const router = Router();
 
-router.post('/users', ExpressAdapter.create(userController.add.bind(userController.add)));
+  router.post('/users', ExpressAdapter.create(UserController.add));
+  router.delete('/users/:id', ExpressAdapter.create(UserController.delete));
 
-export default router;
+  return router;
+}

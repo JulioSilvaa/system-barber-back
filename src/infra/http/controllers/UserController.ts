@@ -2,18 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 
 import { CreateUserInputDTO } from '@/application/dtos/UserDto';
 import CreateUserUseCase from '@/application/useCases/user/Create';
-import BCryptHashProvider from '@/infra/helpers/BcryptHash';
-import UUIDGenerator from '@/infra/helpers/IdGenerator';
-import UserRepositoryMemory from '../../repositories/inMemory/user/userRepositoryMemory';
+import DeleteUserUseCase from '@/application/useCases/user/Delete';
+import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+
+const userRepository = new UserRepositoryMemory();
 
 export default class UserController {
   static async add(req: Request, res: Response, next: NextFunction) {
     try {
-      const createUserUseCase = new CreateUserUseCase(
-        new UserRepositoryMemory(),
-        new BCryptHashProvider(),
-        new UUIDGenerator(),
-      );
+      const createUser = new CreateUserUseCase(userRepository);
 
       const input: CreateUserInputDTO = {
         name: req.body.name,
@@ -24,8 +21,25 @@ export default class UserController {
         role: req.body.role,
       };
 
-      const output = await createUserUseCase.execute(input);
+      const output = await createUser.execute(input);
       return res.status(201).json(output);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+
+      if (typeof id !== 'string') {
+        return res.status(400).json({ message: 'ID inválido' });
+      }
+
+      const deleteUserUseCase = new DeleteUserUseCase(userRepository);
+      await deleteUserUseCase.execute(id);
+
+      return res.status(200).json({ message: 'Usuário deletado com sucesso' });
     } catch (error) {
       next(error);
     }
