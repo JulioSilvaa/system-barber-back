@@ -1,7 +1,8 @@
 export type TokenPayload = {
   sub: string;
-  role: string;
-  barbershopId: string;
+  globalRole: string;
+  barbershopId?: string;
+  localRole?: string;
   iat?: number;
   exp?: number;
 };

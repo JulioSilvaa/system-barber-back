@@ -1,40 +1,37 @@
-export type UserRole = 'ADMIN' | 'BARBER';
+export type GlobalUserRole = 'USER' | 'SUPER_ADMIN';
 
 export type UserProps = {
   id: string;
-  barbershopId: string;
   name: string;
-  phone: string;
-  role?: UserRole;
-  isActive?: boolean;
-  password?: string;
   email: string;
+  phone: string;
+  password?: string;
+  globalRole?: GlobalUserRole;
+  isActive?: boolean;
 };
 
 export default class User {
   public _id: string;
-  public _barbershopId: string;
   public _name: string;
-  public _phone: string;
-  public _role: UserRole;
-  public _isActive: boolean;
-  public _password?: string;
   public _email: string;
+  public _phone: string;
+  public _password?: string;
+  public _globalRole: GlobalUserRole;
+  public _isActive: boolean;
 
   constructor(props: UserProps) {
     this._id = props.id;
-    this._barbershopId = props.barbershopId;
     this._name = props.name;
-    this._phone = props.phone;
-    this._role = props.role ?? 'BARBER';
-    this._password = props?.password;
-    this._isActive = props.isActive ?? true;
     this._email = props.email;
+    this._phone = props.phone;
+    this._password = props?.password;
+    this._globalRole = props.globalRole ?? 'USER';
+    this._isActive = props.isActive ?? true;
     this.validate();
   }
 
   static create(props: UserProps): User {
-    return new User({ ...props, role: props.role ?? 'BARBER' });
+    return new User({ ...props, globalRole: props.globalRole ?? 'USER' });
   }
 
   // ================= GETTERS =================
@@ -42,32 +39,28 @@ export default class User {
     return this._id;
   }
 
-  get barbershopId(): string {
-    return this._barbershopId;
-  }
-
   get name(): string {
     return this._name;
+  }
+
+  get email(): string {
+    return this._email;
   }
 
   get phone(): string {
     return this._phone;
   }
 
-  get role(): UserRole {
-    return this._role;
-  }
-
-  get isActive(): boolean {
-    return this._isActive;
-  }
-
   get password(): string | undefined {
     return this._password;
   }
 
-  get email(): string {
-    return this._email;
+  get globalRole(): GlobalUserRole {
+    return this._globalRole;
+  }
+
+  get isActive(): boolean {
+    return this._isActive;
   }
 
   // ================= SETTERS / MUTADORES DE ESTADO =================
@@ -76,14 +69,14 @@ export default class User {
     this.validateName();
   }
 
+  set email(value: string) {
+    this._email = value;
+    this.validateEmail();
+  }
+
   set phone(value: string) {
     this._phone = value;
     this.validatePhone();
-  }
-
-  set role(value: UserRole) {
-    this._role = value;
-    this.validateRole();
   }
 
   set password(value: string | undefined) {
@@ -91,9 +84,9 @@ export default class User {
     this.validatePassword();
   }
 
-  set email(value: string) {
-    this._email = value;
-    this.validateEmail();
+  set globalRole(value: GlobalUserRole) {
+    this._globalRole = value;
+    this.validateGlobalRole();
   }
 
   public activate(): void {
@@ -105,12 +98,12 @@ export default class User {
   }
 
   // ================= MÉTODOS DE CONVENIÊNCIA =================
-  public isAdmin(): boolean {
-    return this._role === 'ADMIN';
+  public isSuperAdmin(): boolean {
+    return this._globalRole === 'SUPER_ADMIN';
   }
 
-  public isBarber(): boolean {
-    return this._role === 'BARBER';
+  public isRegularUser(): boolean {
+    return this._globalRole === 'USER';
   }
 
   // ================= VALIDAÇÕES =================
@@ -118,10 +111,9 @@ export default class User {
   private validate(): void {
     this.validateName();
     this.validateEmail();
-    this.validateBarbershopId();
-    this.validateRole();
-    this.validatePassword();
     this.validatePhone();
+    this.validatePassword();
+    this.validateGlobalRole();
   }
 
   private validateName(): void {
@@ -154,24 +146,6 @@ export default class User {
     const emailRegex = /^(?=.{1,254}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(trimmedEmail)) {
       throw new Error('Formato de email inválido');
-    }
-  }
-
-  private validateBarbershopId(): void {
-    if (!this._barbershopId || this._barbershopId.trim() === '') {
-      throw new Error('ID da barbearia é obrigatório');
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(this._barbershopId.trim())) {
-      throw new Error('Formato do ID da barbearia é inválido');
-    }
-  }
-
-  private validateRole(): void {
-    const validRoles = ['ADMIN', 'BARBER'];
-    if (!this._role || !validRoles.includes(this._role)) {
-      throw new Error('Função inválida');
     }
   }
 
@@ -217,6 +191,13 @@ export default class User {
       throw new Error(
         'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
+    }
+  }
+
+  private validateGlobalRole(): void {
+    const validRoles: GlobalUserRole[] = ['USER', 'SUPER_ADMIN'];
+    if (!this._globalRole || !validRoles.includes(this._globalRole)) {
+      throw new Error('Papel global inválido');
     }
   }
 }

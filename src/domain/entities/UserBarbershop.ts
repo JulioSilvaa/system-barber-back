@@ -1,0 +1,71 @@
+export type MembershipStatus = 'ACTIVE' | 'INACTIVE';
+
+export type LocalBarbershopRole = 'OWNER' | 'BARBER';
+
+export type UserBarbershopProps = {
+  id: string;
+  userId: string;
+  barbershopId: string;
+  status?: MembershipStatus;
+  localRole?: LocalBarbershopRole;
+};
+
+export default class UserBarbershop {
+  public readonly id: string;
+  public readonly userId: string;
+  public readonly barbershopId: string;
+  public status: MembershipStatus;
+  public readonly localRole: LocalBarbershopRole;
+
+  constructor(props: UserBarbershopProps) {
+    this.id = props.id;
+    this.userId = props.userId;
+    this.barbershopId = props.barbershopId;
+    this.status = props.status ?? 'ACTIVE';
+    this.localRole = props.localRole ?? 'BARBER';
+    this.validate();
+  }
+
+  // ================= MÉTODOS DE ESTADO =================
+  public activate(): void {
+    this.status = 'ACTIVE';
+  }
+
+  public deactivate(): void {
+    this.status = 'INACTIVE';
+  }
+
+  public isActive(): boolean {
+    return this.status === 'ACTIVE';
+  }
+
+  // ================= MÉTODOS DE CONVENIÊNCIA =================
+  public isOwner(): boolean {
+    return this.localRole === 'OWNER';
+  }
+
+  public isBarber(): boolean {
+    return this.localRole === 'BARBER';
+  }
+
+  // ================= VALIDAÇÕES =================
+  private validate(): void {
+    if (!this.userId || this.userId.trim() === '') {
+      throw new Error('ID do usuário é obrigatório');
+    }
+
+    if (!this.barbershopId || this.barbershopId.trim() === '') {
+      throw new Error('ID da barbearia é obrigatório');
+    }
+
+    const validStatuses: MembershipStatus[] = ['ACTIVE', 'INACTIVE'];
+    if (!this.status || !validStatuses.includes(this.status)) {
+      throw new Error('Status de membro inválido');
+    }
+
+    const validRoles: LocalBarbershopRole[] = ['OWNER', 'BARBER'];
+    if (!this.localRole || !validRoles.includes(this.localRole)) {
+      throw new Error('Papel local inválido');
+    }
+  }
+}

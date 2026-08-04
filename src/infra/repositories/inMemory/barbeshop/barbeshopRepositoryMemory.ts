@@ -4,8 +4,8 @@ import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository'
 export default class BarbershopRepositoryMemory implements IBarbershopRepository {
   private readonly barbershops: Barbershop[] = [];
 
-  async findBySlug(): Promise<Barbershop | null> {
-    return null;
+  async findBySlug(slug: string): Promise<Barbershop | null> {
+    return this.barbershops.find(barbershop => barbershop.slug === slug) ?? null;
   }
 
   async save(barbershop: Barbershop): Promise<Barbershop> {
