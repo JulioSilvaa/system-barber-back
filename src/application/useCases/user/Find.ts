@@ -24,8 +24,7 @@ export default class FindUserUseCase {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      barbershopId: user.barbershopId,
-      role: user.role,
+      globalRole: user.globalRole,
       isActive: user.isActive,
     };
   }

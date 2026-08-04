@@ -19,6 +19,8 @@ export class Barbershop {
 
   constructor(props: BarbershopProps) {
     this.validateSlug(props.slug);
+    this.validatePhone(props.phone);
+    this.validatePassword(props.password);
 
     this.id = props.id;
     this.name = props.name;
@@ -37,14 +39,18 @@ export class Barbershop {
   }
 
   private validatePhone(phone: string): void {
-    const isValid = /^\+?[1-9]\d{1,14}$/.test(phone);
+    const isValid = /^\+?[1-9]\d{8,14}$/.test(phone);
 
     if (!isValid) {
       throw new Error('phone must be a valid international phone number');
     }
   }
 
-  private validatePassword(password: string): void {
+  private validatePassword(password?: string): void {
+    if (!password) {
+      return;
+    }
+
     const isValid = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(password);
 
     if (!isValid) {

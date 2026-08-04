@@ -1,12 +1,10 @@
-import { UserRole } from '@/domain/entities/User';
+import { GlobalUserRole } from '@/domain/entities/User';
 
 export interface CreateUserInputDTO {
   name: string;
   email: string;
   phone: string;
-  barbershopId: string;
   password: string;
-  role?: UserRole;
 }
 
 export interface CreateUserOutputDTO {
@@ -14,7 +12,6 @@ export interface CreateUserOutputDTO {
   name: string;
   email: string;
   phone: string;
-  barbershopId: string;
-  role: UserRole;
+  globalRole: GlobalUserRole;
   isActive: boolean;
 }

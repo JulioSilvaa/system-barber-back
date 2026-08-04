@@ -5,7 +5,13 @@ export default class UserRepositoryMemory implements IUserRepository {
   private users: User[] = [];
 
   async save(user: User): Promise<void> {
-    this.users.push(user);
+    const existingIndex = this.users.findIndex(item => item.id === user.id);
+
+    if (existingIndex !== -1) {
+      this.users[existingIndex] = user;
+    } else {
+      this.users.push(user);
+    }
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -15,27 +21,13 @@ export default class UserRepositoryMemory implements IUserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    const user = this.users.find(user => user.id === id);
-
-    if (!user) {
-      return null;
-    }
-
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      barbershopId: user.barbershopId,
-      role: user.role,
-      isActive: user.isActive,
-    };
+    return this.users.find(user => user.id === id) ?? null;
   }
 
-  async delete(id: string): Promise<User> {
+  async delete(id: string): Promise<void> {
     const userIndex = this.users.findIndex(user => user.id === id);
     if (userIndex === -1) {
-      throw new Error('Ususário não encontrado');
+      throw new Error('Usuário não encontrado');
     }
     this.users.splice(userIndex, 1);
   }
