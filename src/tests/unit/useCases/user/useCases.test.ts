@@ -6,6 +6,7 @@ import { CreateUserInputDTO } from '@/application/dtos/UserDto';
 import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import ListUserUseCase from '../../../../application/useCases/user/List';
 
 describe('User UseCases Unit Tests', () => {
   const VALID_BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -19,6 +20,7 @@ describe('User UseCases Unit Tests', () => {
   let createUseCase: CreateUserUseCase;
   let deleteUseCase: DeleteUserUseCase;
   let findByIdUseCase: FindUserByIdUseCase;
+  let listUserUseCase: ListUserUseCase;
 
   const inputMock: CreateUserInputDTO = {
     name: 'John Doe',
@@ -43,6 +45,7 @@ describe('User UseCases Unit Tests', () => {
     createUseCase = new CreateUserUseCase(userRepository, mockHashRepository, mockIdGenerator);
     deleteUseCase = new DeleteUserUseCase(userRepository);
     findByIdUseCase = new FindUserByIdUseCase(userRepository);
+    listUserUseCase = new ListUserUseCase(userRepository);
   });
 
   describe('CreateUserUseCase', () => {
@@ -94,6 +97,24 @@ describe('User UseCases Unit Tests', () => {
       const output = await findByIdUseCase.execute(NON_EXISTENT_ID);
 
       expect(output).toBeNull();
+    });
+  });
+
+  describe('ListUsersUseCase', () => {
+    it('deve retornar a lista contendo os usuários cadastrados', async () => {
+      await createUseCase.execute(inputMock);
+
+      const output = await listUserUseCase.execute();
+
+      expect(output).toHaveLength(1);
+      expect(output[0].id).toBe(VALID_USER_ID);
+      expect(output[0].email).toBe(inputMock.email);
+    });
+
+    it('deve retornar uma lista vazia quando não houver usuários', async () => {
+      const output = await listUserUseCase.execute();
+
+      expect(output).toEqual([]);
     });
   });
 

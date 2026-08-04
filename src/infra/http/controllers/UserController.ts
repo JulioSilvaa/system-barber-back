@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { CreateUserInputDTO } from '@/application/dtos/UserDto';
 import CreateUserUseCase from '@/application/useCases/user/Create';
 import DeleteUserUseCase from '@/application/useCases/user/Delete';
+import ListUserUseCase from '@/application/useCases/user/List';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 
 const userRepository = new UserRepositoryMemory();
@@ -23,6 +24,16 @@ export default class UserController {
 
       const output = await createUser.execute(input);
       return res.status(201).json(output);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async list(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const listUserUseCase = new ListUserUseCase(userRepository);
+      const users = await listUserUseCase.execute();
+      return res.status(200).json(users);
     } catch (error) {
       next(error);
     }

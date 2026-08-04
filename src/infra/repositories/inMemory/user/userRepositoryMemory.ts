@@ -39,4 +39,8 @@ export default class UserRepositoryMemory implements IUserRepository {
     }
     this.users.splice(userIndex, 1);
   }
+
+  async list(): Promise<User[]> {
+    return this.users;
+  }
 }

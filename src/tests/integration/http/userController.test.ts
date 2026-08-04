@@ -54,6 +54,22 @@ describe('UserController HTTP', () => {
     });
   });
 
+  describe('GET /api/users', () => {
+    it('deveria listar todos os usuários via HTTP', async () => {
+      const app = buildTestApp();
+
+      await request(app)
+        .post('/api/users')
+        .send({ ...validPayload, email: 'list-user@example.com' });
+
+      const response = await request(app).get('/api/users');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('DELETE /api/users/:id', () => {
     it('deveria deletar um usuário via HTTP', async () => {
       const app = buildTestApp();

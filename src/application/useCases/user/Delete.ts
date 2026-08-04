@@ -1,4 +1,3 @@
-import { CreateUserOutputDTO } from '@/application/dtos/UserDto';
 import UserRepository from '@/domain/repository/UserRepository';
 
 export default class DeleteUserUseCase {
@@ -7,7 +6,7 @@ export default class DeleteUserUseCase {
     this._userRepository = userRepository;
   }
 
-  async execute(id: string): Promise<CreateUserOutputDTO | null> {
+  async execute(id: string): Promise<void> {
     if (!id || id.trim() === '') throw new Error('ID do usuário é obrigatório');
 
     const trimmedId = id.trim();
@@ -21,6 +20,5 @@ export default class DeleteUserUseCase {
     if (!user) throw new Error('Usuário não encontrado');
 
     await this._userRepository.delete(trimmedId);
-    return user;
   }
 }
