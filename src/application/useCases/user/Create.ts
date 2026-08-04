@@ -3,23 +3,34 @@ import User from '@/domain/entities/User';
 import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
 import IUserRepository from '@/domain/repository/UserRepository';
+import BcryptHashService from '@/infra/helpers/BcryptHash';
+import CryptoUuidGenerator from '@/infra/helpers/IdGenerator';
 
 export default class CreateUserUseCase {
+  private readonly _userRepository: IUserRepository;
+  private readonly _hashRepository: HashRepository;
+  private readonly _idGenerator: IdGeneratorRepository;
+
   constructor(
-    private readonly _userRepository: IUserRepository,
-    private readonly _hashPassword: HashRepository,
-    private readonly _idGenerator: IdGeneratorRepository,
-  ) {}
+    userRepository: IUserRepository,
+    hashRepository: HashRepository = new BcryptHashService(),
+    idGenerator: IdGeneratorRepository = new CryptoUuidGenerator(),
+  ) {
+    this._userRepository = userRepository;
+    this._hashRepository = hashRepository;
+    this._idGenerator = idGenerator;
+  }
 
   async execute(input: CreateUserInputDTO): Promise<CreateUserOutputDTO> {
     this.validateInput(input);
+    this.validatePasswordStrength(input.password);
 
     const existingUser = await this._userRepository.findByEmail(input.email);
     if (existingUser) {
       throw new Error('Email já cadastrado');
     }
 
-    const hashedPassword = await this._hashPassword.hash(input.password ?? '');
+    const hashedPassword = await this._hashRepository.hash(input.password as string);
     const user = this.createUser(input, hashedPassword);
 
     await this._userRepository.save(user);
@@ -28,12 +39,27 @@ export default class CreateUserUseCase {
   }
 
   private validateInput(input: CreateUserInputDTO): void {
+    if (!input.name?.trim()) {
+      throw new Error('Nome é obrigatório');
+    }
     if (!input.email?.trim()) {
       throw new Error('Email é obrigatório');
     }
+  }
 
-    if (input.password === undefined) {
-      input.password = '';
+  private validatePasswordStrength(password?: string): void {
+    if (!password || password.length < 8 || password.length > 72) {
+      throw new Error('Senha deve ter entre 8 e 72 caracteres');
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      throw new Error(
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
+      );
     }
   }
 
