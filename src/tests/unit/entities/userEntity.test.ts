@@ -95,7 +95,7 @@ describe('User Entity', () => {
         makeUser({
           email: '',
         }),
-      ).toThrow('Email is required');
+      ).toThrow('Email é obrigatório');
     });
 
     it('deve validar formato', () => {
@@ -103,7 +103,7 @@ describe('User Entity', () => {
         makeUser({
           email: 'teste.com',
         }),
-      ).toThrow('Invalid email format');
+      ).toThrow('Formato de email inválido');
     });
 
     it('deve rejeitar emails muito longos', () => {
@@ -111,7 +111,7 @@ describe('User Entity', () => {
         makeUser({
           email: `${'a'.repeat(250)} @a.com`,
         }),
-      ).toThrow('Email is too long');
+      ).toThrow('Email é muito longo');
     });
   });
 
@@ -121,7 +121,7 @@ describe('User Entity', () => {
         makeUser({
           phone: '',
         }),
-      ).toThrow('Phone is required');
+      ).toThrow('Telefone é obrigatório');
     });
 
     it('deve validar quantidade de dígitos', () => {
@@ -129,7 +129,7 @@ describe('User Entity', () => {
         makeUser({
           phone: '12345',
         }),
-      ).toThrow('Phone must have 10 or 11 digits');
+      ).toThrow('Telefone deve ter 10 ou 11 dígitos');
     });
 
     it('deve rejeitar sequência repetida', () => {
@@ -137,7 +137,7 @@ describe('User Entity', () => {
         makeUser({
           phone: '11111111111',
         }),
-      ).toThrow('Phone cannot be a repeated sequence of digits');
+      ).toThrow('Telefone não pode ser uma sequência repetida de dígitos');
     });
 
     it('deve validar DDD', () => {
@@ -145,7 +145,7 @@ describe('User Entity', () => {
         makeUser({
           phone: '00999999999',
         }),
-      ).toThrow('Invalid DDD in phone number');
+      ).toThrow('DDD do telefone é inválido');
     });
 
     it('deve validar nono dígito', () => {
@@ -153,7 +153,7 @@ describe('User Entity', () => {
         makeUser({
           phone: '16888888888',
         }),
-      ).toThrow('Mobile phones must start with 9 after DDD');
+      ).toThrow('Celulares devem começar com 9 após o DDD');
     });
   });
 
@@ -163,7 +163,7 @@ describe('User Entity', () => {
         makeUser({
           password: undefined,
         }),
-      ).toThrow('Password is required');
+      ).toThrow('Senha é obrigatória');
     });
 
     it('deve validar tamanho mínimo', () => {
@@ -171,7 +171,7 @@ describe('User Entity', () => {
         makeUser({
           password: 'Abc123',
         }),
-      ).toThrow('Password must be between 8 and 72 characters');
+      ).toThrow('Senha deve ter entre 8 e 72 caracteres');
     });
 
     it('deve exigir letra maiúscula', () => {
@@ -180,7 +180,7 @@ describe('User Entity', () => {
           password: 'senha123',
         }),
       ).toThrow(
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     });
 
@@ -190,7 +190,7 @@ describe('User Entity', () => {
           password: 'SENHA123',
         }),
       ).toThrow(
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     });
 
@@ -200,7 +200,7 @@ describe('User Entity', () => {
           password: 'SenhaTeste',
         }),
       ).toThrow(
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     });
   });
@@ -219,7 +219,7 @@ describe('User Entity', () => {
         makeUser({
           role: 'CLIENT' as never,
         }),
-      ).toThrow('Invalid role');
+      ).toThrow('Função inválida');
     });
   });
 
@@ -229,7 +229,7 @@ describe('User Entity', () => {
         makeUser({
           barbershopId: '',
         }),
-      ).toThrow('Barbershop ID is required');
+      ).toThrow('ID da barbearia é obrigatório');
     });
 
     it('deve validar UUID', () => {
@@ -237,7 +237,7 @@ describe('User Entity', () => {
         makeUser({
           barbershopId: '123',
         }),
-      ).toThrow('Invalid Barbershop ID format');
+      ).toThrow('Formato do ID da barbearia é inválido');
     });
   });
 
@@ -321,7 +321,7 @@ describe('User Entity', () => {
 
       expect(() => {
         user.email = 'emailinvalido';
-      }).toThrow('Invalid email format');
+      }).toThrow('Formato de email inválido');
     });
 
     it('deve alterar telefone', () => {
@@ -337,7 +337,7 @@ describe('User Entity', () => {
 
       expect(() => {
         user.phone = '123';
-      }).toThrow('Phone must have 10 or 11 digits');
+      }).toThrow('Telefone deve ter 10 ou 11 dígitos');
     });
 
     it('deve alterar senha', () => {
@@ -353,7 +353,7 @@ describe('User Entity', () => {
 
       expect(() => {
         user.password = '123';
-      }).toThrow('Password must be between 8 and 72 characters');
+      }).toThrow('Senha deve ter entre 8 e 72 caracteres');
     });
 
     it('deve alterar role', () => {

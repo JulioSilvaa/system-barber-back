@@ -134,7 +134,6 @@ export default class User {
       throw new Error('Nome deve ter entre 2 e 80 caracteres');
     }
 
-    // Corrigido: Aceita letras simples, acentuadas, espaços, ' e -
     const nameRegex = /^[A-Za-zÀ-ÿ\s'-]+$/;
     if (!nameRegex.test(trimmed)) {
       throw new Error('Nome contém caracteres inválidos');
@@ -143,86 +142,80 @@ export default class User {
 
   private validateEmail(): void {
     if (!this._email || this._email.trim() === '') {
-      throw new Error('Email is required');
+      throw new Error('Email é obrigatório');
     }
 
     const trimmedEmail = this._email.trim().toLowerCase();
 
     if (trimmedEmail.length > 254) {
-      throw new Error('Email is too long');
+      throw new Error('Email é muito longo');
     }
 
-    // Regex conforme padrão RFC 5322 simplificado e prático
     const emailRegex = /^(?=.{1,254}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(trimmedEmail)) {
-      throw new Error('Invalid email format');
+      throw new Error('Formato de email inválido');
     }
   }
 
   private validateBarbershopId(): void {
     if (!this._barbershopId || this._barbershopId.trim() === '') {
-      throw new Error('Barbershop ID is required');
+      throw new Error('ID da barbearia é obrigatório');
     }
 
-    // Se for UUIDv4 (comum em IDs de banco)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(this._barbershopId.trim())) {
-      throw new Error('Invalid Barbershop ID format');
+      throw new Error('Formato do ID da barbearia é inválido');
     }
   }
 
   private validateRole(): void {
     const validRoles = ['ADMIN', 'BARBER'];
     if (!this._role || !validRoles.includes(this._role)) {
-      throw new Error('Invalid role');
+      throw new Error('Função inválida');
     }
   }
 
   private validatePhone(): void {
     if (!this._phone || this._phone.trim() === '') {
-      throw new Error('Phone is required');
+      throw new Error('Telefone é obrigatório');
     }
 
     const digits = this._phone.replace(/\D/g, '');
 
-    // Valida tamanho padrão do Brasil (10 dígitos para fixo, 11 para celular com nono dígito)
     if (digits.length < 10 || digits.length > 11) {
-      throw new Error('Phone must have 10 or 11 digits');
+      throw new Error('Telefone deve ter 10 ou 11 dígitos');
     }
 
-    // Impede números repetidos como '11111111111'
     if (/^(\d)\1+$/.test(digits)) {
-      throw new Error('Phone cannot be a repeated sequence of digits');
+      throw new Error('Telefone não pode ser uma sequência repetida de dígitos');
     }
 
-    // Valida DDDs válidos do Brasil (11 a 99) e Nono Dígito para celulares
     const ddd = parseInt(digits.substring(0, 2), 10);
     if (ddd < 11 || ddd > 99) {
-      throw new Error('Invalid DDD in phone number');
+      throw new Error('DDD do telefone é inválido');
     }
 
     if (digits.length === 11 && digits[2] !== '9') {
-      throw new Error('Mobile phones must start with 9 after DDD');
+      throw new Error('Celulares devem começar com 9 após o DDD');
     }
   }
 
   private validatePassword(): void {
     if (!this._password) {
-      throw new Error('Password is required');
+      throw new Error('Senha é obrigatória');
     }
 
     if (this._password.length < 8 || this._password.length > 72) {
-      throw new Error('Password must be between 8 and 72 characters');
+      throw new Error('Senha deve ter entre 8 e 72 caracteres');
     }
 
-    // Regra de complexidade: pelo menos 1 letra maiúscula, 1 minúscula e 1 número
     const hasUpperCase = /[A-Z]/.test(this._password);
     const hasLowerCase = /[a-z]/.test(this._password);
     const hasNumber = /[0-9]/.test(this._password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
       throw new Error(
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     }
   }
