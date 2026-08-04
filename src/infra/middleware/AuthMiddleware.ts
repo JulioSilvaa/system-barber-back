@@ -1,40 +1,80 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
 interface IPayload {
   sub: string;
+  globalRole?: 'USER' | 'SUPER_ADMIN';
 }
 
-class AuthMiddleware {
-  auth(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers.authorization;
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: 'Token não fornecido' });
-    }
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Token não fornecido' });
+  }
 
-    // Espera o formato "Bearer <TOKEN>"
-    const [, token] = authHeader.split(' ');
+  const [, token] = authHeader.split(' ');
 
-    if (!token) {
-      return res.status(401).json({ message: 'Formato do token inválido' });
-    }
+  if (!token) {
+    return res.status(401).json({ message: 'Formato do token inválido' });
+  }
 
-    if (!process.env.JWT_ACCESS_SECRET) {
-      return res.status(500).json({ message: 'Erro de configuração do servidor' });
-    }
+  if (!process.env.JWT_ACCESS_SECRET) {
+    return res.status(500).json({ message: 'Erro de configuração do servidor' });
+  }
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET) as IPayload;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET) as IPayload;
 
-      // Injeta o ID do usuário no Request
-      req.user_id = decoded.sub;
+    req.userId = decoded.sub;
+    req.globalRole = decoded.globalRole ?? 'USER';
 
-      return next();
-    } catch {
-      return res.status(401).json({ message: 'Token inválido ou expirado' });
-    }
+    return next();
+  } catch {
+    return res.status(401).json({ message: 'Token inválido ou expirado' });
   }
 }
 
-export default new AuthMiddleware();
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.globalRole !== 'SUPER_ADMIN') {
+    return res.status(403).json({ message: 'Acesso negado' });
+  }
+
+  return next();
+}
+
+export function requireMembership(req: Request, res: Response, next: NextFunction) {
+  if (!req.membershipActive) {
+    return res.status(403).json({ message: 'Acesso negado' });
+  }
+
+  return next();
+}
+
+export function requireSuperAdminOrOwner(userBarbershopRepository: IUserBarbershopRepository) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (req.globalRole === 'SUPER_ADMIN') {
+      return next();
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    const memberships = await userBarbershopRepository.findByUserId(req.userId);
+    const barbershopId: string | undefined = req.body?.barbershopId;
+
+    const isOwner = barbershopId
+      ? memberships.some(
+          membership => membership.barbershopId === barbershopId && membership.isOwner(),
+        )
+      : memberships.some(membership => membership.isOwner());
+
+    if (!isOwner) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
+
+    return next();
+  };
+}
