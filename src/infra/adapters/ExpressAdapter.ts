@@ -8,7 +8,7 @@ export default class ExpressAdapter {
       try {
         return await fn(req, res, next);
       } catch (error) {
-        return error;
+        return next(error);
       }
     };
   }

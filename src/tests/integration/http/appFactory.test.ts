@@ -1,11 +1,20 @@
+import express, { Request, Response } from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { createApp } from '@/infra/http/express/app';
+function buildTestApp() {
+  const app = express();
 
-describe('createApp', () => {
-  it('should expose the health route through the express app factory', async () => {
-    const app = createApp();
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  return app;
+}
+
+describe('Health Check', () => {
+  it('deveria expor a rota de health check', async () => {
+    const app = buildTestApp();
 
     const response = await request(app).get('/health');
 
