@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateUserUseCase from '@/application/useCases/user/Create';
+import CreateAdminUserUseCase from '@/application/useCases/user/CreateAdmin';
 import DeleteUserUseCase from '@/application/useCases/user/Delete';
 import FindUserByIdUseCase from '@/application/useCases/user/Find';
+import ListUserUseCase from '@/application/useCases/user/List';
+import UpdateUserRoleUseCase from '@/application/useCases/user/UpdateRole';
 import { CreateUserInputDTO } from '@/application/dtos/UserDto';
+import { GlobalUserRole } from '@/domain/entities/User';
 import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
-import ListUserUseCase from '../../../../application/useCases/user/List';
 
-describe('User UseCases Unit Tests', () => {
-  const VALID_BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+describe('User Use Cases Unit Tests', () => {
   const VALID_USER_ID = '123e4567-e89b-41d3-a456-426614174000';
   const NON_EXISTENT_ID = 'f47ac10b-0000-0000-0000-000000000000';
 
@@ -18,15 +20,16 @@ describe('User UseCases Unit Tests', () => {
   let mockIdGenerator: IdGeneratorRepository;
 
   let createUseCase: CreateUserUseCase;
+  let createAdminUseCase: CreateAdminUserUseCase;
   let deleteUseCase: DeleteUserUseCase;
   let findByIdUseCase: FindUserByIdUseCase;
   let listUserUseCase: ListUserUseCase;
+  let updateRoleUseCase: UpdateUserRoleUseCase;
 
   const inputMock: CreateUserInputDTO = {
     name: 'John Doe',
     email: 'john@example.com',
     phone: '11999999999',
-    barbershopId: VALID_BARBERSHOP_ID,
     password: 'Password123',
   };
 
@@ -43,13 +46,19 @@ describe('User UseCases Unit Tests', () => {
     };
 
     createUseCase = new CreateUserUseCase(userRepository, mockHashRepository, mockIdGenerator);
+    createAdminUseCase = new CreateAdminUserUseCase(
+      userRepository,
+      mockHashRepository,
+      mockIdGenerator,
+    );
     deleteUseCase = new DeleteUserUseCase(userRepository);
     findByIdUseCase = new FindUserByIdUseCase(userRepository);
     listUserUseCase = new ListUserUseCase(userRepository);
+    updateRoleUseCase = new UpdateUserRoleUseCase(userRepository);
   });
 
   describe('CreateUserUseCase', () => {
-    it('deve criar e salvar um usuário com sucesso', async () => {
+    it('deve criar e salvar um usuário global com sucesso', async () => {
       const output = await createUseCase.execute(inputMock);
 
       const savedUser = await userRepository.findByEmail(inputMock.email);
@@ -59,20 +68,85 @@ describe('User UseCases Unit Tests', () => {
         name: inputMock.name,
         email: inputMock.email,
         phone: inputMock.phone,
-        barbershopId: VALID_BARBERSHOP_ID,
-        role: 'BARBER',
+        globalRole: 'USER',
         isActive: true,
       });
+      expect(output).not.toHaveProperty('barbershopId');
+      expect(output).not.toHaveProperty('role');
       expect(mockHashRepository.hash).toHaveBeenCalledWith(inputMock.password);
       expect(mockIdGenerator.generate).toHaveBeenCalled();
       expect(savedUser).toBeTruthy();
       expect(savedUser?.password).toBe('HashedPassword123');
     });
 
+    it('não deve permitir elevar o papel global pelo cadastro público', async () => {
+      const input = { ...inputMock, globalRole: 'SUPER_ADMIN' } as unknown as CreateUserInputDTO;
+
+      const output = await createUseCase.execute(input);
+
+      expect(output.globalRole).toBe('USER');
+    });
+
     it('deve impedir cadastro com email duplicado', async () => {
       await createUseCase.execute(inputMock);
 
       await expect(createUseCase.execute(inputMock)).rejects.toThrow('Email já cadastrado');
+    });
+  });
+
+  describe('CreateAdminUserUseCase', () => {
+    it('deve criar um usuário SUPER_ADMIN', async () => {
+      const output = await createAdminUseCase.execute(inputMock);
+
+      const savedUser = await userRepository.findByEmail(inputMock.email);
+
+      expect(output.globalRole).toBe('SUPER_ADMIN');
+      expect(savedUser?.globalRole).toBe('SUPER_ADMIN');
+      expect(savedUser?.password).toBe('HashedPassword123');
+    });
+
+    it('deve impedir criação com email duplicado', async () => {
+      await createAdminUseCase.execute(inputMock);
+
+      await expect(createAdminUseCase.execute(inputMock)).rejects.toThrow('Email já cadastrado');
+    });
+  });
+
+  describe('UpdateUserRoleUseCase', () => {
+    it('deve atualizar o papel global de um usuário existente', async () => {
+      await createUseCase.execute(inputMock);
+
+      const updatedRole = await updateRoleUseCase.execute(VALID_USER_ID, 'SUPER_ADMIN');
+
+      const savedUser = await userRepository.findById(VALID_USER_ID);
+      expect(updatedRole).toBe('SUPER_ADMIN');
+      expect(savedUser?.globalRole).toBe('SUPER_ADMIN');
+    });
+
+    it('deve rejeitar um papel global inválido', async () => {
+      await createUseCase.execute(inputMock);
+
+      await expect(
+        updateRoleUseCase.execute(VALID_USER_ID, 'ADMIN' as GlobalUserRole),
+      ).rejects.toThrow('Papel global inválido');
+    });
+
+    it('deve lançar erro quando o usuário não existe', async () => {
+      await expect(updateRoleUseCase.execute(NON_EXISTENT_ID, 'SUPER_ADMIN')).rejects.toThrow(
+        'Usuário não encontrado',
+      );
+    });
+
+    it('deve lançar erro quando o ID é inválido', async () => {
+      await expect(updateRoleUseCase.execute('id-invalido', 'SUPER_ADMIN')).rejects.toThrow(
+        'ID do usuário é inválido',
+      );
+    });
+
+    it('deve lançar erro quando o ID não é informado', async () => {
+      await expect(updateRoleUseCase.execute('', 'SUPER_ADMIN')).rejects.toThrow(
+        'ID do usuário é obrigatório',
+      );
     });
   });
 
@@ -87,8 +161,7 @@ describe('User UseCases Unit Tests', () => {
         name: inputMock.name,
         email: inputMock.email,
         phone: inputMock.phone,
-        barbershopId: VALID_BARBERSHOP_ID,
-        role: 'BARBER',
+        globalRole: 'USER',
         isActive: true,
       });
     });
@@ -184,20 +257,6 @@ describe('User UseCases Unit Tests', () => {
 
       await expect(createUseCase.execute(input)).rejects.toThrow(
         'Nome contém caracteres inválidos',
-      );
-    });
-
-    it('deve lançar erro quando o barbershopId não for informado', async () => {
-      const input = { ...inputMock, barbershopId: '' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow('ID da barbearia é obrigatório');
-    });
-
-    it('deve lançar erro quando o barbershopId tiver formato inválido', async () => {
-      const input = { ...inputMock, barbershopId: 'id-invalido' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Formato do ID da barbearia é inválido',
       );
     });
 
