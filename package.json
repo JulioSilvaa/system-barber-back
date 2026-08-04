@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/infra/http/express/server.ts",
+    "seed": "tsx src/infra/seed/seedAdmin.ts",
     "build": "rimraf dist && tsup src/infra/http/express/server.ts --format esm --clean",
     "start": "node dist/server.js",
     "lint": "eslint .",
