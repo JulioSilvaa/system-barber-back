@@ -32,6 +32,21 @@ export default class AppointmentRepositoryMemory implements IAppointmentReposito
     );
   }
 
+  async findByBarbershopAndDate(barbershopId: string, date: Date): Promise<Appointment[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return this.appointments.filter(
+      appointment =>
+        appointment.barbershopId === barbershopId &&
+        appointment.startDate >= startOfDay &&
+        appointment.startDate < endOfDay,
+    );
+  }
+
   async save(appointment: Appointment): Promise<Appointment> {
     const existingIndex = this.appointments.findIndex(item => item.id === appointment.id);
 

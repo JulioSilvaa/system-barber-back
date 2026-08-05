@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { UserBarbershop } from '@/domain/entities';
+import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import {
   requireAuth,
   requireSuperAdmin,
@@ -11,6 +13,10 @@ type AuthenticatedRequest = Request & {
   userId?: string;
   globalRole?: 'USER' | 'SUPER_ADMIN';
   barbershopId?: string;
+  localRole?: string;
+  membershipActive?: boolean;
+  params?: Record<string, string>;
+  body?: Record<string, unknown>;
 };
 
 function makeValidToken(payload: object = {}): string {
@@ -109,34 +115,110 @@ describe('Auth Middleware', () => {
   });
 
   describe('requireMembership', () => {
-    it('deve retornar 403 quando o usuário não tem vínculo ativo com a barbearia', () => {
-      const req = {
+    function makeMembershipRepo(membership: UserBarbershop | null) {
+      return {
+        findByUserAndBarbershop: vi.fn().mockResolvedValue(membership),
+      } as unknown as IUserBarbershopRepository;
+    }
+
+    function makeActiveMembership(
+      overrides: Partial<{ id: string; localRole: 'OWNER' | 'BARBER' }> = {},
+    ) {
+      return new UserBarbershop({
+        id: overrides.id ?? 'membership-1',
         userId: 'user-1',
         barbershopId: 'barbershop-1',
-        membershipActive: false,
-      } as AuthenticatedRequest & { membershipActive?: boolean };
+        status: 'ACTIVE',
+        localRole: overrides.localRole ?? 'BARBER',
+      });
+    }
+
+    it('deve retornar 401 quando não há userId (requireAuth não executado)', async () => {
+      const req = {
+        params: { barbershopId: 'barbershop-1' },
+        body: {},
+      } as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
-      requireMembership(req, res, next);
+      const middleware = requireMembership(makeMembershipRepo(null));
+      await middleware(req as Request, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Token não fornecido' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('deve retornar 400 quando a barbearia não é identificada', async () => {
+      const req = {
+        userId: 'user-1',
+        params: {},
+        body: {},
+      } as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      const middleware = requireMembership(makeMembershipRepo(null));
+      await middleware(req as Request, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Barbearia não identificada' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('deve retornar 403 quando o usuário não tem vínculo ativo com a barbearia', async () => {
+      const req = {
+        userId: 'user-1',
+        params: { barbershopId: 'barbershop-1' },
+        body: {},
+      } as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      const middleware = requireMembership(makeMembershipRepo(null));
+      await middleware(req as Request, res, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ message: 'Acesso negado' });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('deve chamar next quando o usuário tem vínculo ativo', () => {
+    it('deve injetar barbershopId, localRole e membershipActive e chamar next com vínculo ativo', async () => {
       const req = {
         userId: 'user-1',
-        barbershopId: 'barbershop-1',
-        membershipActive: true,
-      } as AuthenticatedRequest & { membershipActive?: boolean };
+        params: { barbershopId: 'barbershop-1' },
+        body: {},
+      } as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
-      requireMembership(req, res, next);
+      const middleware = requireMembership(
+        makeMembershipRepo(makeActiveMembership({ localRole: 'OWNER' })),
+      );
+      await middleware(req as Request, res, next);
 
       expect(next).toHaveBeenCalled();
+      expect(req.barbershopId).toBe('barbershop-1');
+      expect(req.localRole).toBe('OWNER');
+      expect(req.membershipActive).toBe(true);
+    });
+
+    it('deve permitir SUPER_ADMIN sem vínculo', async () => {
+      const req = {
+        userId: 'super-admin',
+        globalRole: 'SUPER_ADMIN',
+        params: { barbershopId: 'barbershop-1' },
+        body: {},
+      } as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      const middleware = requireMembership(makeMembershipRepo(null));
+      await middleware(req as Request, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.barbershopId).toBe('barbershop-1');
+      expect(req.membershipActive).toBe(true);
     });
   });
 });

@@ -49,6 +49,23 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
     return rows.map(toEntity);
   }
 
+  async findByBarbershopAndDate(barbershopId: string, date: Date): Promise<Appointment[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const rows = await this.prisma.appointment.findMany({
+      where: {
+        barbershopId,
+        startDate: { gte: startOfDay, lt: endOfDay },
+      },
+      orderBy: { startDate: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
   async save(appointment: Appointment): Promise<Appointment> {
     const data = {
       id: appointment.id,
