@@ -217,6 +217,18 @@ describe('Database Integration (SQLite)', () => {
 
       expect(sameDay).toHaveLength(1);
       expect(otherDay).toHaveLength(0);
+
+      const barbershopSameDay = await repositories.appointmentRepository.findByBarbershopAndDate(
+        'b-1',
+        new Date('2026-08-10T15:00:00.000Z'),
+      );
+      const barbershopOtherDay = await repositories.appointmentRepository.findByBarbershopAndDate(
+        'b-1',
+        new Date('2026-08-11T15:00:00.000Z'),
+      );
+
+      expect(barbershopSameDay).toHaveLength(1);
+      expect(barbershopOtherDay).toHaveLength(0);
     });
   });
 

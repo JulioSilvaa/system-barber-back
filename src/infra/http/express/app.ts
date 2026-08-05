@@ -9,6 +9,8 @@ import rateLimit from 'express-rate-limit';
 import createAuthRoutes from '../routes/authRoutes';
 import createBarbershopRoutes from '../routes/barbershopRoutes';
 import createMembershipRoutes from '../routes/membershipRoutes';
+import createServiceRoutes from '../routes/serviceRoutes';
+import createAppointmentRoutes from '../routes/appointmentRoutes';
 import createUserRoutes from '../routes/userRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
@@ -27,7 +29,13 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
   app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }));
 
   const repositories = deps?.repositories ?? createRepositorySet();
-  const { userRepository, barbershopRepository, userBarbershopRepository } = repositories;
+  const {
+    userRepository,
+    barbershopRepository,
+    userBarbershopRepository,
+    serviceRepository,
+    appointmentRepository,
+  } = repositories;
   const hashService = new BcryptHashService();
   const tokenService = new JwtTokenService();
 
@@ -36,6 +44,13 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
     createUserRoutes({ userRepository, userBarbershopRepository }),
     createBarbershopRoutes({ barbershopRepository, userBarbershopRepository }),
     createMembershipRoutes({ userBarbershopRepository, userRepository, barbershopRepository }),
+    createServiceRoutes({ serviceRepository, barbershopRepository, userBarbershopRepository }),
+    createAppointmentRoutes({
+      appointmentRepository,
+      serviceRepository,
+      barbershopRepository,
+      userBarbershopRepository,
+    }),
     createAuthRoutes({ userRepository, hashService, tokenService, userBarbershopRepository }),
   );
   app.use('/', healthRoutes);

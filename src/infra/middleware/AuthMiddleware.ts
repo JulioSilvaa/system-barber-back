@@ -44,12 +44,44 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
   return next();
 }
 
-export function requireMembership(req: Request, res: Response, next: NextFunction) {
-  if (!req.membershipActive) {
-    return res.status(403).json({ message: 'Acesso negado' });
-  }
+export function requireMembership(userBarbershopRepository: IUserBarbershopRepository) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (req.globalRole === 'SUPER_ADMIN') {
+      const barbershopId = req.params.barbershopId ?? req.body?.barbershopId;
 
-  return next();
+      if (barbershopId) {
+        req.barbershopId = barbershopId;
+      }
+
+      req.membershipActive = true;
+      return next();
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    const barbershopId = req.params.barbershopId ?? req.body?.barbershopId;
+
+    if (!barbershopId) {
+      return res.status(400).json({ message: 'Barbearia não identificada' });
+    }
+
+    const membership = await userBarbershopRepository.findByUserAndBarbershop(
+      req.userId,
+      barbershopId,
+    );
+
+    if (!membership || !membership.isActive()) {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
+
+    req.barbershopId = barbershopId;
+    req.localRole = membership.localRole;
+    req.membershipActive = true;
+
+    return next();
+  };
 }
 
 export function requireSuperAdminOrOwner(userBarbershopRepository: IUserBarbershopRepository) {
