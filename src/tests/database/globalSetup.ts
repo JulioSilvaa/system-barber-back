@@ -1,19 +1,31 @@
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { Client } from 'pg';
 
-export const TEST_DATABASE_URL = 'file:./.tmp/test.db';
+const DEFAULT_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/systembarber';
 
-export default function globalSetup() {
-  const tmpDir = resolve(process.cwd(), '.tmp');
-  if (!existsSync(tmpDir)) {
-    mkdirSync(tmpDir, { recursive: true });
+function buildTestDatabaseUrl(databaseUrl: string): string {
+  const url = new URL(databaseUrl);
+  const database = url.pathname.replace('/', '');
+  url.pathname = `/${database}_test`;
+  return url.toString();
+}
+
+export const TEST_DATABASE_URL = buildTestDatabaseUrl(
+  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+);
+
+export default async function globalSetup() {
+  const adminUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+  const client = new Client({ connectionString: adminUrl });
+  await client.connect();
+
+  const testDatabase = new URL(TEST_DATABASE_URL).pathname.replace('/', '');
+  const exists = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [testDatabase]);
+  if (exists.rowCount === 0) {
+    await client.query(`CREATE DATABASE ${testDatabase}`);
   }
 
-  rmSync(resolve(tmpDir, 'test.db'), { force: true });
-  rmSync(resolve(tmpDir, 'test.db-journal'), { force: true });
-  rmSync(resolve(tmpDir, 'test.db-wal'), { force: true });
-  rmSync(resolve(tmpDir, 'test.db-shm'), { force: true });
+  await client.end();
 
   execSync('yarn prisma db push', {
     stdio: 'inherit',
