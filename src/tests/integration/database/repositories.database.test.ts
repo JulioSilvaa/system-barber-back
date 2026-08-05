@@ -272,5 +272,71 @@ describe('Database Integration (SQLite)', () => {
       expect(membership).toHaveLength(1);
       expect(membership[0].isOwner()).toBe(true);
     });
+
+    it('deve criar serviço e agendamento via HTTP e persistir no banco', async () => {
+      const tokenService = new JwtTokenService();
+
+      await repositories.userRepository.save(new User({ id: 'owner-1', ...adminProps }));
+      await repositories.barbershopRepository.save(
+        new Barbershop({
+          id: 'b-flow',
+          name: 'Barbearia Flow',
+          slug: 'barbearia-flow',
+          phone: '11999999999',
+        }),
+      );
+      await repositories.userBarbershopRepository.save(
+        new UserBarbershop({
+          id: 'm-flow',
+          userId: 'owner-1',
+          barbershopId: 'b-flow',
+          localRole: 'OWNER',
+        }),
+      );
+
+      const app = createApp({ repositories });
+      const token = tokenService.sign({ sub: 'owner-1', globalRole: 'USER' }, '30m');
+
+      const createService = await request(app)
+        .post('/api/barbershops/b-flow/services')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Corte', priceCents: 3500, durationMinutes: 30 });
+
+      expect(createService.status).toBe(201);
+      const serviceId = createService.body.id as string;
+
+      const createAppointment = await request(app)
+        .post('/api/barbershops/b-flow/appointments')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          barberId: 'owner-1',
+          serviceId,
+          customerName: 'Cliente Flow',
+          customerPhone: '11988888888',
+          startDate: '2026-08-10T14:00:00.000Z',
+        });
+
+      expect(createAppointment.status).toBe(201);
+      expect(createAppointment.body.status).toBe('SCHEDULED');
+
+      const listDay = await request(app)
+        .get('/api/barbershops/b-flow/appointments?date=2026-08-10')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(listDay.status).toBe(200);
+      expect(listDay.body).toHaveLength(1);
+      expect(listDay.body[0]).toEqual(
+        expect.objectContaining({ customerName: 'Cliente Flow', status: 'SCHEDULED' }),
+      );
+
+      const persistedService = await repositories.serviceRepository.findById(serviceId, 'b-flow');
+      expect(persistedService?.name).toBe('Corte');
+
+      const persistedAppointment = await repositories.appointmentRepository.findById(
+        createAppointment.body.id,
+        'b-flow',
+      );
+      expect(persistedAppointment?.customerName).toBe('Cliente Flow');
+    });
   });
 });
