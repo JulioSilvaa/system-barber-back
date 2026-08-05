@@ -13,11 +13,9 @@ import createUserRoutes from '../routes/userRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
-import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
-import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
-import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import { createRepositorySet, RepositorySet } from '@/infra/repositories/factory';
 
-export function createApp() {
+export function createApp(deps?: { repositories?: RepositorySet }) {
   const app = express();
 
   app.use(helmet());
@@ -28,9 +26,8 @@ export function createApp() {
   app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
   app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }));
 
-  const userRepository = new UserRepositoryMemory();
-  const userBarbershopRepository = new UserBarbershopRepositoryMemory();
-  const barbershopRepository = new BarbershopRepositoryMemory();
+  const repositories = deps?.repositories ?? createRepositorySet();
+  const { userRepository, barbershopRepository, userBarbershopRepository } = repositories;
   const hashService = new BcryptHashService();
   const tokenService = new JwtTokenService();
 

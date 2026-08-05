@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 import CreateAdminUserUseCase from '@/application/useCases/user/CreateAdmin';
-import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import { createRepositorySet } from '@/infra/repositories/factory';
 
 async function seedAdmin() {
   const name = process.env.ADMIN_NAME;
@@ -16,7 +16,7 @@ async function seedAdmin() {
     process.exit(1);
   }
 
-  const userRepository = new UserRepositoryMemory();
+  const { userRepository } = createRepositorySet();
   const createAdmin = new CreateAdminUserUseCase(userRepository);
 
   try {

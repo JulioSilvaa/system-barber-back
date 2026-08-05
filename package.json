@@ -14,6 +14,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -23,8 +26,11 @@
     ]
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "7.9.0",
+    "@prisma/client": "7.9.0",
     "@types/node": "^26.1.1",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -40,6 +46,7 @@
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^9.39.1",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",

@@ -12,5 +12,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    env: {
+      DB_DRIVER: 'memory',
+      JWT_ACCESS_SECRET: 'test-secret',
+      JWT_REFRESH_SECRET: 'test-refresh-secret',
+      BCRYPT_SALT: '10',
+    },
+    globalSetup: ['./src/tests/database/globalSetup.ts'],
   },
 });
