@@ -2,29 +2,33 @@ export type BarbershopProps = {
   id: string;
   name: string;
   slug: string;
+  email: string;
   phone: string;
   primaryColor?: string;
   logoUrl?: string;
   isActive?: boolean;
-  password?: string;
+  password: string;
 };
 
 export class Barbershop {
   public readonly id: string;
   public readonly name: string;
   public readonly slug: string;
+  public readonly email: string;
   public readonly phone: string;
   public readonly isActive: boolean;
-  public readonly password: string | undefined;
+  public readonly password: string;
 
   constructor(props: BarbershopProps) {
     this.validateSlug(props.slug);
+    this.validateEmail(props.email);
     this.validatePhone(props.phone);
     this.validatePassword(props.password);
 
     this.id = props.id;
     this.name = props.name;
     this.slug = props.slug;
+    this.email = props.email.trim().toLowerCase();
     this.phone = props.phone;
     this.isActive = props.isActive ?? true;
     this.password = props.password;
@@ -38,6 +42,14 @@ export class Barbershop {
     }
   }
 
+  private validateEmail(email: string): void {
+    const emailRegex = /^(?=.{1,254}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (!email || !emailRegex.test(email)) {
+      throw new Error('email must be a valid email address');
+    }
+  }
+
   private validatePhone(phone: string): void {
     const isValid = /^\+?[1-9]\d{8,14}$/.test(phone);
 
@@ -46,14 +58,17 @@ export class Barbershop {
     }
   }
 
-  private validatePassword(password?: string): void {
-    if (!password) {
-      return;
+  private validatePassword(password: string): void {
+    if (!password || password.length < 8) {
+      throw new Error(
+        'password must be at least 8 characters long and contain at least one letter and one number',
+      );
     }
 
-    const isValid = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(password);
+    const hasLetter = /[A-Za-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
 
-    if (!isValid) {
+    if (!hasLetter || !hasNumber) {
       throw new Error(
         'password must be at least 8 characters long and contain at least one letter and one number',
       );
