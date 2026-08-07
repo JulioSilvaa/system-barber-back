@@ -1,48 +1,52 @@
 import { Router } from 'express';
 import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
-import ServiceController from '../controllers/ServiceController';
-import {
-  requireAuth,
-  requireMembership,
-  resolveBarbershop,
-} from '@/infra/middleware/AuthMiddleware';
+import CustomerController from '../controllers/CustomerController';
+import { requireAuth, requireMembership, requireOwner } from '@/infra/middleware/AuthMiddleware';
 import AuditService from '@/application/services/AuditService';
-import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
-import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
+import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 
-export interface ServiceRoutesDeps {
-  serviceRepository: IServiceRepository;
+export interface CustomerRoutesDeps {
+  customerRepository: ICustomerRepository;
   barbershopRepository: IBarbershopRepository;
   userBarbershopRepository: IUserBarbershopRepository;
   auditService: AuditService;
 }
 
-export default function createServiceRoutes(deps?: ServiceRoutesDeps) {
+export default function createCustomerRoutes(deps?: CustomerRoutesDeps) {
   const router = Router();
 
-  const serviceRepository = deps?.serviceRepository ?? new ServiceRepositoryMemory();
+  const customerRepository = deps?.customerRepository ?? new CustomerRepositoryMemory();
   const barbershopRepository = deps?.barbershopRepository ?? new BarbershopRepositoryMemory();
   const userBarbershopRepository =
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
   const auditService = deps?.auditService ?? new AuditService(new AuditRepositoryMemory());
 
-  const controller = new ServiceController(serviceRepository, barbershopRepository, auditService);
+  const controller = new CustomerController(customerRepository, barbershopRepository, auditService);
 
   router.post(
-    '/barbershops/:barbershopId/services',
+    '/barbershops/:barbershopId/customers',
     requireAuth,
     requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.create),
   );
   router.get(
-    '/barbershops/:identifier/services',
-    resolveBarbershop(barbershopRepository),
+    '/barbershops/:barbershopId/customers',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.list),
+  );
+  router.patch(
+    '/barbershops/:barbershopId/customers/:id/vip',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    requireOwner,
+    ExpressAdapter.create(controller.setVip),
   );
 
   return router;

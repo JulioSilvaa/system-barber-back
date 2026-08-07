@@ -1,10 +1,43 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
 interface IPayload {
   sub: string;
-  globalRole?: 'USER' | 'SUPER_ADMIN';
+  actor?: 'USER' | 'BARBERSHOP' | 'ADMIN';
+}
+
+function paramString(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+export function resolveBarbershop(barbershopRepository: IBarbershopRepository) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const identifier = paramString(req.params.identifier) ?? paramString(req.params.barbershopId);
+
+    if (!identifier) {
+      return res.status(400).json({ message: 'Barbearia não identificada' });
+    }
+
+    const barbershop =
+      (await barbershopRepository.findById(identifier)) ??
+      (await barbershopRepository.findBySlug(identifier));
+
+    if (!barbershop) {
+      return res.status(404).json({ message: 'Barbearia não encontrada' });
+    }
+
+    if (!barbershop.isActive) {
+      return res.status(404).json({ message: 'Barbearia inativa' });
+    }
+
+    req.barbershopId = barbershop.id;
+    return next();
+  };
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -28,7 +61,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET) as IPayload;
 
     req.userId = decoded.sub;
-    req.globalRole = decoded.globalRole ?? 'USER';
+    req.actor = decoded.actor ?? 'USER';
 
     return next();
   } catch {
@@ -36,32 +69,50 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.globalRole !== 'SUPER_ADMIN') {
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.actor !== 'ADMIN') {
     return res.status(403).json({ message: 'Acesso negado' });
   }
 
   return next();
 }
 
-export function requireMembership(userBarbershopRepository: IUserBarbershopRepository) {
+export function requireMembership(
+  userBarbershopRepository: IUserBarbershopRepository,
+  barbershopRepository?: IBarbershopRepository,
+) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (req.globalRole === 'SUPER_ADMIN') {
-      const barbershopId = req.params.barbershopId ?? req.body?.barbershopId;
+    const barbershopId =
+      paramString(req.params.barbershopId) ?? paramString(req.body?.barbershopId);
 
-      if (barbershopId) {
-        req.barbershopId = barbershopId;
+    if (req.actor === 'BARBERSHOP') {
+      if (!req.userId) {
+        return res.status(401).json({ message: 'Token não fornecido' });
       }
 
+      if (!barbershopId) {
+        return res.status(400).json({ message: 'Barbearia não identificada' });
+      }
+
+      if (req.userId !== barbershopId) {
+        return res.status(403).json({ message: 'Acesso negado' });
+      }
+
+      const isActive = await isBarbershopActive(barbershopRepository, barbershopId);
+      if (!isActive) {
+        return res.status(403).json({ message: 'Barbearia inativa' });
+      }
+
+      req.barbershopId = barbershopId;
+      req.localRole = 'OWNER';
       req.membershipActive = true;
+
       return next();
     }
 
     if (!req.userId) {
       return res.status(401).json({ message: 'Token não fornecido' });
     }
-
-    const barbershopId = req.params.barbershopId ?? req.body?.barbershopId;
 
     if (!barbershopId) {
       return res.status(400).json({ message: 'Barbearia não identificada' });
@@ -76,6 +127,11 @@ export function requireMembership(userBarbershopRepository: IUserBarbershopRepos
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
+    const isActive = await isBarbershopActive(barbershopRepository, barbershopId);
+    if (!isActive) {
+      return res.status(403).json({ message: 'Barbearia inativa' });
+    }
+
     req.barbershopId = barbershopId;
     req.localRole = membership.localRole;
     req.membershipActive = true;
@@ -84,29 +140,40 @@ export function requireMembership(userBarbershopRepository: IUserBarbershopRepos
   };
 }
 
-export function requireSuperAdminOrOwner(userBarbershopRepository: IUserBarbershopRepository) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    if (req.globalRole === 'SUPER_ADMIN') {
-      return next();
-    }
+async function isBarbershopActive(
+  barbershopRepository: IBarbershopRepository | undefined,
+  barbershopId: string,
+): Promise<boolean> {
+  if (!barbershopRepository) {
+    return true;
+  }
 
-    if (!req.userId) {
-      return res.status(401).json({ message: 'Token não fornecido' });
-    }
+  const barbershop = await barbershopRepository.findById(barbershopId);
+  return barbershop?.isActive === true;
+}
 
-    const memberships = await userBarbershopRepository.findByUserId(req.userId);
-    const barbershopId: string | undefined = req.body?.barbershopId;
-
-    const isOwner = barbershopId
-      ? memberships.some(
-          membership => membership.barbershopId === barbershopId && membership.isOwner(),
-        )
-      : memberships.some(membership => membership.isOwner());
-
-    if (!isOwner) {
-      return res.status(403).json({ message: 'Acesso negado' });
-    }
-
+export function requireOwner(req: Request, res: Response, next: NextFunction) {
+  if (req.localRole === 'OWNER') {
     return next();
-  };
+  }
+
+  return res.status(403).json({ message: 'Acesso negado' });
+}
+
+export function requireBarbershopSelf(req: Request, res: Response, next: NextFunction) {
+  if (req.actor !== 'BARBERSHOP') {
+    return res.status(403).json({ message: 'Acesso negado' });
+  }
+
+  const barbershopId =
+    paramString(req.params.barbershopId) ??
+    paramString(req.params.id) ??
+    paramString(req.body?.barbershopId);
+
+  if (!barbershopId || req.userId !== barbershopId) {
+    return res.status(403).json({ message: 'Acesso negado' });
+  }
+
+  req.barbershopId = barbershopId;
+  return next();
 }
