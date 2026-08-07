@@ -37,27 +37,21 @@ describe('UserBarbershop Entity', () => {
       expect(membership.localRole).toBe('BARBER');
     });
 
-    it('deve aceitar localRole OWNER', () => {
-      const membership = new UserBarbershop(makeUserBarbershopProps({ localRole: 'OWNER' }));
-
-      expect(membership.localRole).toBe('OWNER');
-    });
-
     it('deve rejeitar um localRole inválido', () => {
       expect(
         () =>
-          new UserBarbershop(
-            makeUserBarbershopProps({ localRole: 'ADMIN' as LocalBarbershopRole }),
-          ),
+          new UserBarbershop({
+            id: 'membership-1',
+            userId: 'user-1',
+            barbershopId: 'barbershop-1',
+            localRole: 'ADMIN' as LocalBarbershopRole,
+          }),
       ).toThrow('Papel local inválido');
     });
 
-    it('isOwner e isBarber devem refletir o papel local', () => {
-      const owner = new UserBarbershop(makeUserBarbershopProps({ localRole: 'OWNER' }));
+    it('isBarber e isOwner devem refletir o papel local', () => {
       const barber = new UserBarbershop(makeUserBarbershopProps({ localRole: 'BARBER' }));
 
-      expect(owner.isOwner()).toBe(true);
-      expect(owner.isBarber()).toBe(false);
       expect(barber.isBarber()).toBe(true);
       expect(barber.isOwner()).toBe(false);
     });

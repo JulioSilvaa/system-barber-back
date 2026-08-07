@@ -27,7 +27,9 @@ describe('Service Use Cases Unit Tests', () => {
         id: BARBERSHOP_ID,
         name: 'Barbearia Central',
         slug: 'barbearia-central',
+        email: 'contato@barbeariacentral.com',
         phone: '+5516999999999',
+        password: 'SenhaForte1',
       }),
     );
   });

@@ -11,6 +11,7 @@ describe('Barbershop Entity', () => {
       expect(barbershop.id).toBe('barbershop-1');
       expect(barbershop.name).toBe('Barbearia Central');
       expect(barbershop.slug).toBe('barbearia-central');
+      expect(barbershop.email).toBe('contato@barbeariacentral.com');
       expect(barbershop.phone).toBe('+5516999999999');
       expect(barbershop.isActive).toBe(true);
     });
@@ -19,6 +20,22 @@ describe('Barbershop Entity', () => {
       const barbershop = new Barbershop(makeBarbershopProps({ isActive: undefined }));
 
       expect(barbershop.isActive).toBe(true);
+    });
+  });
+
+  describe('Validação de email', () => {
+    it('deve rejeitar email inválido', () => {
+      expect(() => new Barbershop(makeBarbershopProps({ email: 'email-invalido' }))).toThrow(
+        'email must be a valid email address',
+      );
+    });
+
+    it('deve normalizar email para minúsculas', () => {
+      const barbershop = new Barbershop(
+        makeBarbershopProps({ email: 'Contato@BarbeariaCentral.com' }),
+      );
+
+      expect(barbershop.email).toBe('contato@barbeariacentral.com');
     });
   });
 

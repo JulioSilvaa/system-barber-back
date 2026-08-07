@@ -1,12 +1,9 @@
-export type GlobalUserRole = 'USER' | 'SUPER_ADMIN';
-
 export type UserProps = {
   id: string;
   name: string;
   email: string;
   phone: string;
   password?: string;
-  globalRole?: GlobalUserRole;
   isActive?: boolean;
 };
 
@@ -16,7 +13,6 @@ export default class User {
   public _email: string;
   public _phone: string;
   public _password?: string;
-  public _globalRole: GlobalUserRole;
   public _isActive: boolean;
 
   constructor(props: UserProps) {
@@ -25,13 +21,12 @@ export default class User {
     this._email = props.email;
     this._phone = props.phone;
     this._password = props?.password;
-    this._globalRole = props.globalRole ?? 'USER';
     this._isActive = props.isActive ?? true;
     this.validate();
   }
 
   static create(props: UserProps): User {
-    return new User({ ...props, globalRole: props.globalRole ?? 'USER' });
+    return new User(props);
   }
 
   // ================= GETTERS =================
@@ -53,10 +48,6 @@ export default class User {
 
   get password(): string | undefined {
     return this._password;
-  }
-
-  get globalRole(): GlobalUserRole {
-    return this._globalRole;
   }
 
   get isActive(): boolean {
@@ -84,26 +75,12 @@ export default class User {
     this.validatePassword();
   }
 
-  set globalRole(value: GlobalUserRole) {
-    this._globalRole = value;
-    this.validateGlobalRole();
-  }
-
   public activate(): void {
     this._isActive = true;
   }
 
   public deactivate(): void {
     this._isActive = false;
-  }
-
-  // ================= MÉTODOS DE CONVENIÊNCIA =================
-  public isSuperAdmin(): boolean {
-    return this._globalRole === 'SUPER_ADMIN';
-  }
-
-  public isRegularUser(): boolean {
-    return this._globalRole === 'USER';
   }
 
   // ================= VALIDAÇÕES =================
@@ -113,7 +90,6 @@ export default class User {
     this.validateEmail();
     this.validatePhone();
     this.validatePassword();
-    this.validateGlobalRole();
   }
 
   private validateName(): void {
@@ -191,13 +167,6 @@ export default class User {
       throw new Error(
         'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
-    }
-  }
-
-  private validateGlobalRole(): void {
-    const validRoles: GlobalUserRole[] = ['USER', 'SUPER_ADMIN'];
-    if (!this._globalRole || !validRoles.includes(this._globalRole)) {
-      throw new Error('Papel global inválido');
     }
   }
 }

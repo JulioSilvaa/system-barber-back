@@ -1,5 +1,4 @@
 import { User } from '@/domain/entities';
-import { GlobalUserRole } from '@/domain/entities/User';
 import IUserRepository from '@/domain/repository/UserRepository';
 import type { PrismaClient, User as PrismaUser } from '@/generated/prisma/client';
 
@@ -10,7 +9,6 @@ function toEntity(row: PrismaUser): User {
     email: row.email,
     phone: row.phone,
     password: row.password ?? undefined,
-    globalRole: row.globalRole as GlobalUserRole,
     isActive: row.isActive,
   });
 }
@@ -25,7 +23,6 @@ export default class UserRepositoryPrisma implements IUserRepository {
       email: user.email.toLowerCase(),
       phone: user.phone,
       password: user.password ?? null,
-      globalRole: user.globalRole,
       isActive: user.isActive,
     };
 

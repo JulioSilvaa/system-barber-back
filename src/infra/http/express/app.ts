@@ -7,14 +7,17 @@ import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import createAuthRoutes from '../routes/authRoutes';
+import createAdminRoutes from '../routes/adminRoutes';
 import createBarbershopRoutes from '../routes/barbershopRoutes';
 import createMembershipRoutes from '../routes/membershipRoutes';
 import createServiceRoutes from '../routes/serviceRoutes';
 import createAppointmentRoutes from '../routes/appointmentRoutes';
+import createCustomerRoutes from '../routes/customerRoutes';
 import createUserRoutes from '../routes/userRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
+import AuditService from '@/application/services/AuditService';
 import { createRepositorySet, RepositorySet } from '@/infra/repositories/factory';
 
 export function createApp(deps?: { repositories?: RepositorySet }) {
@@ -31,27 +34,60 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
   const repositories = deps?.repositories ?? createRepositorySet();
   const {
     userRepository,
+    adminRepository,
     barbershopRepository,
     userBarbershopRepository,
     serviceRepository,
     appointmentRepository,
+    customerRepository,
+    auditRepository,
   } = repositories;
   const hashService = new BcryptHashService();
   const tokenService = new JwtTokenService();
+  const auditService = new AuditService(auditRepository);
 
   app.use(
     '/api',
-    createUserRoutes({ userRepository, userBarbershopRepository }),
-    createBarbershopRoutes({ barbershopRepository, userBarbershopRepository }),
-    createMembershipRoutes({ userBarbershopRepository, userRepository, barbershopRepository }),
-    createServiceRoutes({ serviceRepository, barbershopRepository, userBarbershopRepository }),
+    createUserRoutes({ userRepository, userBarbershopRepository, auditService }),
+    createBarbershopRoutes({
+      barbershopRepository,
+      userBarbershopRepository,
+      userRepository,
+      auditService,
+    }),
+    createMembershipRoutes({
+      userBarbershopRepository,
+      userRepository,
+      barbershopRepository,
+      auditService,
+    }),
+    createServiceRoutes({
+      serviceRepository,
+      barbershopRepository,
+      userBarbershopRepository,
+      auditService,
+    }),
     createAppointmentRoutes({
       appointmentRepository,
       serviceRepository,
       barbershopRepository,
       userBarbershopRepository,
+      customerRepository,
+      auditService,
+    }),
+    createCustomerRoutes({
+      customerRepository,
+      barbershopRepository,
+      userBarbershopRepository,
+      auditService,
     }),
     createAuthRoutes({ userRepository, hashService, tokenService, userBarbershopRepository }),
+    createAdminRoutes({
+      adminRepository,
+      hashService,
+      tokenService,
+      auditService,
+    }),
   );
   app.use('/', healthRoutes);
 

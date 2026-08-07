@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Service } from '@/domain/entities/Service';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
@@ -14,9 +15,10 @@ export default class CreateServiceUseCase {
   constructor(
     private readonly serviceRepository: IServiceRepository,
     private readonly barbershopRepository: IBarbershopRepository,
+    private readonly auditService?: AuditService,
   ) {}
 
-  async execute(input: CreateServiceInputDTO): Promise<Service> {
+  async execute(input: CreateServiceInputDTO, auditCtx?: AuditContext): Promise<Service> {
     if (!input.name || input.name.trim() === '') {
       throw new Error('Nome do serviço é obrigatório');
     }
@@ -34,6 +36,23 @@ export default class CreateServiceUseCase {
       durationMinutes: input.durationMinutes,
     });
 
-    return this.serviceRepository.save(service);
+    const saved = await this.serviceRepository.save(service);
+
+    await this.auditService?.record({
+      ...auditCtx,
+      barbershopId: input.barbershopId,
+      action: 'CREATE',
+      entityType: 'SERVICE',
+      entityId: saved.id,
+      after: {
+        id: saved.id,
+        name: saved.name,
+        priceCents: saved.priceCents,
+        durationMinutes: saved.durationMinutes,
+        barbershopId: saved.barbershopId,
+      },
+    });
+
+    return saved;
   }
 }

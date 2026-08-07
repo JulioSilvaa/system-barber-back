@@ -5,8 +5,7 @@ export type AppointmentProps = {
   barbershopId: string;
   barberId: string;
   serviceId: string;
-  customerName: string;
-  customerPhone: string;
+  customerId: string;
   startDate: Date;
   endDate: Date;
   status?: AppointmentStatus;
@@ -17,8 +16,7 @@ export class Appointment {
   public readonly barbershopId: string;
   public readonly barberId: string;
   public readonly serviceId: string;
-  public readonly customerName: string;
-  public readonly customerPhone: string;
+  public readonly customerId: string;
   public readonly startDate: Date;
   public readonly endDate: Date;
   public status: AppointmentStatus;
@@ -32,8 +30,7 @@ export class Appointment {
     this.barbershopId = props.barbershopId;
     this.barberId = props.barberId;
     this.serviceId = props.serviceId;
-    this.customerName = props.customerName;
-    this.customerPhone = props.customerPhone;
+    this.customerId = props.customerId;
     this.startDate = props.startDate;
     this.endDate = props.endDate;
     this.status = props.status ?? 'SCHEDULED';

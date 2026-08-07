@@ -2,37 +2,44 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
-import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Appointment HTTP Integration', () => {
-  const tokenService = new JwtTokenService();
-
-  const OWNER_SUB = '123e4567-e89b-41d3-a456-426614174020';
-
   beforeEach(() => {
     process.env.BCRYPT_SALT = '10';
     process.env.JWT_ACCESS_SECRET = 'test-secret';
     process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
   });
 
-  function auth(sub: string, globalRole: 'USER' | 'SUPER_ADMIN' = 'USER') {
-    return `Bearer ${tokenService.sign({ sub, globalRole }, '30m')}`;
-  }
-
   async function createBarbershop(app: Application, slug: string, name: string) {
     const response = await request(app)
       .post('/api/barbershops')
-      .set('Authorization', auth(OWNER_SUB))
-      .send({ name, slug, phone: '+5516999999999' });
+      .send({
+        name,
+        slug,
+        email: `${slug}@example.com`,
+        phone: '+5516999999999',
+        password: 'SenhaForte1',
+      });
 
     expect(response.status).toBe(201);
-    return response.body as { id: string };
+    const id = (response.body as { id: string }).id;
+
+    const login = await request(app)
+      .post('/api/barbershops/login')
+      .send({ email: `${slug}@example.com`, password: 'SenhaForte1' });
+
+    expect(login.status).toBe(200);
+
+    return {
+      id,
+      token: login.body.accessToken as string,
+    };
   }
 
-  async function createBarber(app: Application, barbershopId: string) {
+  async function createBarber(app: Application, barbershopId: string, token: string) {
     const response = await request(app)
       .post('/api/users')
-      .set('Authorization', auth(OWNER_SUB))
+      .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Barbeiro João',
         email: `barbeiro-${Date.now()}@example.com`,
@@ -45,10 +52,10 @@ describe('Appointment HTTP Integration', () => {
     return response.body as { id: string };
   }
 
-  async function createService(app: Application, barbershopId: string) {
+  async function createService(app: Application, barbershopId: string, token: string) {
     const response = await request(app)
       .post(`/api/barbershops/${barbershopId}/services`)
-      .set('Authorization', auth(OWNER_SUB))
+      .set('Authorization', `Bearer ${token}`)
       .send({ name: 'Corte de cabelo', priceCents: 4000, durationMinutes: 30 });
 
     expect(response.status).toBe(201);
@@ -69,12 +76,12 @@ describe('Appointment HTTP Integration', () => {
     it('deve criar um agendamento com endDate calculado pela duração do serviço', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
@@ -94,21 +101,21 @@ describe('Appointment HTTP Integration', () => {
     it('deve retornar 400 quando o barbeiro já tem agendamento no mesmo horário', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       const payload = appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z');
 
       const first = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(payload);
 
       expect(first.status).toBe(201);
 
       const second = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(payload);
 
       expect(second.status).toBe(400);
@@ -120,46 +127,99 @@ describe('Appointment HTTP Integration', () => {
     it('deve permitir agendar em horário não conflitante', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
 
       expect(response.status).toBe(201);
     });
 
-    it('deve retornar 403 quando o usuário não tem vínculo com a barbearia', async () => {
+    it('deve permitir criar agendamento sem autenticação (rota pública)', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth('intruso-1'))
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual(
+        expect.objectContaining({ customerName: 'Maria Souza', status: 'SCHEDULED' }),
+      );
+    });
+
+    it('deve permitir criar agendamento resolvendo a barbearia pelo slug', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
+
+      const response = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+
+      expect(response.status).toBe(201);
+
+      const bySlug = await request(app)
+        .post('/api/barbershops/barbearia-central/appointments')
+        .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
+
+      expect(bySlug.status).toBe(201);
+    });
+
+    it('deve reutilizar o mesmo cliente para o mesmo telefone', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
+
+      const first = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+
+      const second = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
+
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(201);
+      expect(first.body.customerId).toBe(second.body.customerId);
+    });
+
+    it('deve retornar 404 quando a barbearia não existe', async () => {
+      const app = createApp();
+
+      const response = await request(app)
+        .post('/api/barbershops/barbearia-inexistente/appointments')
+        .send(appointmentPayload('barbeiro-1', 'servico-1', '2026-08-10T14:00:00.000Z'));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual(
+        expect.objectContaining({ message: 'Barbearia não encontrada' }),
+      );
     });
 
     it('deve retornar 400 quando o serviço não pertence à barbearia', async () => {
       const app = createApp();
       const barbershopA = await createBarbershop(app, 'barbearia-a', 'Barbearia A');
       const barbershopB = await createBarbershop(app, 'barbearia-b', 'Barbearia B');
-      const barber = await createBarber(app, barbershopA.id);
-      const serviceB = await createService(app, barbershopB.id);
+      const barber = await createBarber(app, barbershopA.id, barbershopA.token);
+      const serviceB = await createService(app, barbershopB.id, barbershopB.token);
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershopA.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershopA.token}`)
         .send(appointmentPayload(barber.id, serviceB.id, '2026-08-10T14:00:00.000Z'));
 
       expect(response.status).toBe(400);
@@ -171,17 +231,17 @@ describe('Appointment HTTP Integration', () => {
     it('deve listar os agendamentos do dia', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
 
       const response = await request(app)
         .get(`/api/barbershops/${barbershop.id}/appointments?date=2026-08-10`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
@@ -195,12 +255,12 @@ describe('Appointment HTTP Integration', () => {
   describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete e cancel', () => {
     async function createAppointment(app: Application) {
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
-      const barber = await createBarber(app, barbershop.id);
-      const service = await createService(app, barbershop.id);
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .set('Authorization', auth(OWNER_SUB))
+        .set('Authorization', `Bearer ${barbershop.token}`)
         .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
@@ -213,7 +273,7 @@ describe('Appointment HTTP Integration', () => {
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(expect.objectContaining({ status: 'COMPLETED' }));
@@ -225,7 +285,7 @@ describe('Appointment HTTP Integration', () => {
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(expect.objectContaining({ status: 'CANCELLED' }));
@@ -237,22 +297,22 @@ describe('Appointment HTTP Integration', () => {
 
       await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(400);
     });
 
-    it('deve retornar 404 ao agendar operação em agendamento inexistente', async () => {
+    it('deve retornar 400 ao agendar operação em agendamento inexistente', async () => {
       const app = createApp();
       const { barbershop } = await createAppointment(app);
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/inexistente/complete`)
-        .set('Authorization', auth(OWNER_SUB));
+        .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(

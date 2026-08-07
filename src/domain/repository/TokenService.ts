@@ -1,6 +1,8 @@
+export type TokenActor = 'USER' | 'BARBERSHOP' | 'ADMIN';
+
 export type TokenPayload = {
   sub: string;
-  globalRole: string;
+  actor?: TokenActor;
   barbershopId?: string;
   localRole?: string;
   iat?: number;

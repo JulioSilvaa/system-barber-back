@@ -4,14 +4,15 @@ import jwt from 'jsonwebtoken';
 import { UserBarbershop } from '@/domain/entities';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import {
+  requireAdmin,
   requireAuth,
-  requireSuperAdmin,
+  requireBarbershopSelf,
   requireMembership,
 } from '@/infra/middleware/AuthMiddleware';
 
 type AuthenticatedRequest = Request & {
   userId?: string;
-  globalRole?: 'USER' | 'SUPER_ADMIN';
+  actor?: 'USER' | 'BARBERSHOP' | 'ADMIN';
   barbershopId?: string;
   localRole?: string;
   membershipActive?: boolean;
@@ -20,10 +21,7 @@ type AuthenticatedRequest = Request & {
 };
 
 function makeValidToken(payload: object = {}): string {
-  return jwt.sign(
-    { sub: 'user-1', globalRole: 'USER', ...payload },
-    process.env.JWT_ACCESS_SECRET as string,
-  );
+  return jwt.sign({ sub: 'user-1', ...payload }, process.env.JWT_ACCESS_SECRET as string);
 }
 
 function makeResponseMock() {
@@ -76,9 +74,11 @@ describe('Auth Middleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('deve injetar o userId e o globalRole no request e chamar next', () => {
+    it('deve injetar o userId e o actor (USER por padrão) no request e chamar next', () => {
       const token = makeValidToken();
-      const req = { headers: { authorization: `Bearer ${token}` } } as AuthenticatedRequest;
+      const req = {
+        headers: { authorization: `Bearer ${token}` },
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
@@ -86,31 +86,124 @@ describe('Auth Middleware', () => {
 
       expect(next).toHaveBeenCalled();
       expect(req.userId).toBe('user-1');
-      expect(req.globalRole).toBe('USER');
+      expect(req.actor).toBe('USER');
     });
-  });
 
-  describe('requireSuperAdmin', () => {
-    it('deve retornar 403 quando o usuário não é SUPER_ADMIN', () => {
-      const req = { userId: 'user-1', globalRole: 'USER' } as AuthenticatedRequest;
+    it('deve injetar actor=BARBERSHOP quando o token é de barbearia', () => {
+      const token = makeValidToken({ actor: 'BARBERSHOP' });
+      const req = {
+        headers: { authorization: `Bearer ${token}` },
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
-      requireSuperAdmin(req, res, next);
+      requireAuth(req, res, next);
+
+      expect(req.actor).toBe('BARBERSHOP');
+      expect(req.userId).toBe('user-1');
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('deve injetar actor=ADMIN quando o token é de admin', () => {
+      const token = makeValidToken({ actor: 'ADMIN' });
+      const req = {
+        headers: { authorization: `Bearer ${token}` },
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireAuth(req, res, next);
+
+      expect(req.actor).toBe('ADMIN');
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe('requireAdmin', () => {
+    it('deve retornar 403 quando o ator não é ADMIN', () => {
+      const req = { actor: 'USER' } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireAdmin(req as Request, res, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ message: 'Acesso negado' });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('deve chamar next quando o usuário é SUPER_ADMIN', () => {
-      const req = { userId: 'user-1', globalRole: 'SUPER_ADMIN' } as AuthenticatedRequest;
+    it('deve chamar next quando o ator é ADMIN', () => {
+      const req = { actor: 'ADMIN' } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
-      requireSuperAdmin(req, res, next);
+      requireAdmin(req as Request, res, next);
 
       expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe('requireBarbershopSelf', () => {
+    it('deve retornar 403 quando o ator não é BARBERSHOP', () => {
+      const req = {
+        userId: 'barbershop-1',
+        actor: 'USER',
+        params: { barbershopId: 'barbershop-1' },
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireBarbershopSelf(req as Request, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Acesso negado' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('deve retornar 403 quando o id da barbearia não bate com o sub do token', () => {
+      const req = {
+        userId: 'barbershop-2',
+        actor: 'BARBERSHOP',
+        params: { barbershopId: 'barbershop-1' },
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireBarbershopSelf(req as Request, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Acesso negado' });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('deve injetar barbershopId e chamar next quando o id bate', () => {
+      const req = {
+        userId: 'barbershop-1',
+        actor: 'BARBERSHOP',
+        params: { barbershopId: 'barbershop-1' },
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireBarbershopSelf(req as Request, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.barbershopId).toBe('barbershop-1');
+    });
+
+    it('deve aceitar a barbearia pelo params.id (rota de status)', () => {
+      const req = {
+        userId: 'barbershop-1',
+        actor: 'BARBERSHOP',
+        params: { id: 'barbershop-1' },
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      requireBarbershopSelf(req as Request, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.barbershopId).toBe('barbershop-1');
     });
   });
 
@@ -137,7 +230,7 @@ describe('Auth Middleware', () => {
       const req = {
         params: { barbershopId: 'barbershop-1' },
         body: {},
-      } as AuthenticatedRequest;
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
@@ -152,9 +245,10 @@ describe('Auth Middleware', () => {
     it('deve retornar 400 quando a barbearia não é identificada', async () => {
       const req = {
         userId: 'user-1',
+        actor: 'USER',
         params: {},
         body: {},
-      } as AuthenticatedRequest;
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
@@ -169,9 +263,10 @@ describe('Auth Middleware', () => {
     it('deve retornar 403 quando o usuário não tem vínculo ativo com a barbearia', async () => {
       const req = {
         userId: 'user-1',
+        actor: 'USER',
         params: { barbershopId: 'barbershop-1' },
         body: {},
-      } as AuthenticatedRequest;
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
@@ -186,30 +281,31 @@ describe('Auth Middleware', () => {
     it('deve injetar barbershopId, localRole e membershipActive e chamar next com vínculo ativo', async () => {
       const req = {
         userId: 'user-1',
+        actor: 'USER',
         params: { barbershopId: 'barbershop-1' },
         body: {},
-      } as AuthenticatedRequest;
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
       const middleware = requireMembership(
-        makeMembershipRepo(makeActiveMembership({ localRole: 'OWNER' })),
+        makeMembershipRepo(makeActiveMembership({ localRole: 'BARBER' })),
       );
       await middleware(req as Request, res, next);
 
       expect(next).toHaveBeenCalled();
       expect(req.barbershopId).toBe('barbershop-1');
-      expect(req.localRole).toBe('OWNER');
+      expect(req.localRole).toBe('BARBER');
       expect(req.membershipActive).toBe(true);
     });
 
-    it('deve permitir SUPER_ADMIN sem vínculo', async () => {
+    it('deve permitir BARBERSHOP quando o id bate com a barbearia da rota', async () => {
       const req = {
-        userId: 'super-admin',
-        globalRole: 'SUPER_ADMIN',
+        userId: 'barbershop-1',
+        actor: 'BARBERSHOP',
         params: { barbershopId: 'barbershop-1' },
         body: {},
-      } as AuthenticatedRequest;
+      } as unknown as AuthenticatedRequest;
       const res = makeResponseMock();
       const next = vi.fn() as NextFunction;
 
@@ -218,7 +314,26 @@ describe('Auth Middleware', () => {
 
       expect(next).toHaveBeenCalled();
       expect(req.barbershopId).toBe('barbershop-1');
+      expect(req.localRole).toBe('OWNER');
       expect(req.membershipActive).toBe(true);
+    });
+
+    it('deve negar BARBERSHOP quando o id não bate com a barbearia da rota', async () => {
+      const req = {
+        userId: 'barbershop-2',
+        actor: 'BARBERSHOP',
+        params: { barbershopId: 'barbershop-1' },
+        body: {},
+      } as unknown as AuthenticatedRequest;
+      const res = makeResponseMock();
+      const next = vi.fn() as NextFunction;
+
+      const middleware = requireMembership(makeMembershipRepo(null));
+      await middleware(req as Request, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Acesso negado' });
+      expect(next).not.toHaveBeenCalled();
     });
   });
 });

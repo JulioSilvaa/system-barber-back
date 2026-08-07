@@ -1,14 +1,22 @@
 import { Router } from 'express';
 import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
 import AppointmentController from '../controllers/AppointmentController';
-import { requireAuth, requireMembership } from '@/infra/middleware/AuthMiddleware';
+import {
+  requireAuth,
+  requireMembership,
+  resolveBarbershop,
+} from '@/infra/middleware/AuthMiddleware';
+import AuditService from '@/application/services/AuditService';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
+import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 
 export interface AppointmentRoutesDeps {
@@ -16,6 +24,8 @@ export interface AppointmentRoutesDeps {
   serviceRepository: IServiceRepository;
   barbershopRepository: IBarbershopRepository;
   userBarbershopRepository: IUserBarbershopRepository;
+  customerRepository: ICustomerRepository;
+  auditService: AuditService;
 }
 
 export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
@@ -26,36 +36,39 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
   const barbershopRepository = deps?.barbershopRepository ?? new BarbershopRepositoryMemory();
   const userBarbershopRepository =
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
+  const customerRepository = deps?.customerRepository ?? new CustomerRepositoryMemory();
+  const auditService = deps?.auditService ?? new AuditService(new AuditRepositoryMemory());
 
   const controller = new AppointmentController(
     appointmentRepository,
     serviceRepository,
     barbershopRepository,
     userBarbershopRepository,
+    customerRepository,
+    auditService,
   );
 
   router.post(
-    '/barbershops/:barbershopId/appointments',
-    requireAuth,
-    requireMembership(userBarbershopRepository),
+    '/barbershops/:identifier/appointments',
+    resolveBarbershop(barbershopRepository),
     ExpressAdapter.create(controller.create),
   );
   router.get(
     '/barbershops/:barbershopId/appointments',
     requireAuth,
-    requireMembership(userBarbershopRepository),
+    requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.listDay),
   );
   router.patch(
     '/barbershops/:barbershopId/appointments/:id/complete',
     requireAuth,
-    requireMembership(userBarbershopRepository),
+    requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.complete),
   );
   router.patch(
     '/barbershops/:barbershopId/appointments/:id/cancel',
     requireAuth,
-    requireMembership(userBarbershopRepository),
+    requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.cancel),
   );
 

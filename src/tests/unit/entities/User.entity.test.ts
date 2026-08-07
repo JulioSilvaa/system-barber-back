@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import User, { GlobalUserRole } from '@/domain/entities/User';
+import User from '@/domain/entities/User';
 import { makeUserProps } from '@/tests/helpers/factories';
 
 describe('User Entity', () => {
@@ -12,36 +12,15 @@ describe('User Entity', () => {
       expect(user.name).toBe('João da Silva');
       expect(user.email).toBe('joao@example.com');
       expect(user.phone).toBe('16999999999');
-      expect(user.globalRole).toBe('USER');
       expect(user.isActive).toBe(true);
       expect(user).not.toHaveProperty('barbershopId');
       expect(user).not.toHaveProperty('role');
-    });
-
-    it('deve definir USER como globalRole padrão', () => {
-      const user = User.create(makeUserProps({ globalRole: undefined }));
-
-      expect(user.globalRole).toBe('USER');
-    });
-
-    it('deve aceitar um usuário SUPER_ADMIN', () => {
-      const user = User.create(makeUserProps({ globalRole: 'SUPER_ADMIN' }));
-
-      expect(user.globalRole).toBe('SUPER_ADMIN');
     });
 
     it('deve definir isActive=true por padrão', () => {
       const user = User.create(makeUserProps({ isActive: undefined }));
 
       expect(user.isActive).toBe(true);
-    });
-  });
-
-  describe('Validação de globalRole', () => {
-    it('deve rejeitar um papel global inválido', () => {
-      expect(() => User.create(makeUserProps({ globalRole: 'ADMIN' as GlobalUserRole }))).toThrow(
-        'Papel global inválido',
-      );
     });
   });
 
@@ -171,32 +150,6 @@ describe('User Entity', () => {
     });
   });
 
-  describe('Métodos de conveniência', () => {
-    it('isSuperAdmin deve retornar true para SUPER_ADMIN', () => {
-      const user = User.create(makeUserProps({ globalRole: 'SUPER_ADMIN' }));
-
-      expect(user.isSuperAdmin()).toBe(true);
-    });
-
-    it('isSuperAdmin deve retornar false para USER', () => {
-      const user = User.create(makeUserProps());
-
-      expect(user.isSuperAdmin()).toBe(false);
-    });
-
-    it('isRegularUser deve retornar true para USER', () => {
-      const user = User.create(makeUserProps());
-
-      expect(user.isRegularUser()).toBe(true);
-    });
-
-    it('isRegularUser deve retornar false para SUPER_ADMIN', () => {
-      const user = User.create(makeUserProps({ globalRole: 'SUPER_ADMIN' }));
-
-      expect(user.isRegularUser()).toBe(false);
-    });
-  });
-
   describe('Setters', () => {
     it('deve alterar nome', () => {
       const user = User.create(makeUserProps());
@@ -260,14 +213,6 @@ describe('User Entity', () => {
       expect(() => {
         user.password = '123';
       }).toThrow('Senha deve ter entre 8 e 72 caracteres');
-    });
-
-    it('deve alterar globalRole', () => {
-      const user = User.create(makeUserProps());
-
-      user.globalRole = 'SUPER_ADMIN';
-
-      expect(user.globalRole).toBe('SUPER_ADMIN');
     });
   });
 });

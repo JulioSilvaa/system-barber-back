@@ -13,7 +13,6 @@ model User {
   email        String          @unique
   phone        String
   password     String?
-  globalRole   String          @default("USER")
   isActive     Boolean         @default(true)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -23,18 +22,32 @@ model User {
   @@map("users")
 }
 
+model Admin {
+  id        String   @id
+  name      String
+  email     String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
 model Barbershop {
   id           String          @id
   name         String
   slug         String          @unique
+  email        String          @unique
   phone        String
-  password     String?
+  password     String
   isActive     Boolean         @default(true)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   memberships  UserBarbershop[]
   services     Service[]
   appointments Appointment[]
+  customers    Customer[]
 
   @@map("barbershops")
 }
@@ -70,20 +83,56 @@ model Service {
 }
 
 model Appointment {
-  id            String     @id
-  barbershopId  String
-  barberId      String
-  serviceId     String
-  customerName  String
-  customerPhone String
-  startDate     DateTime
-  endDate       DateTime
-  status        String     @default("SCHEDULED")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  barbershop    Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  barber        User       @relation("BarberAppointments", fields: [barberId], references: [id])
-  service       Service    @relation(fields: [serviceId], references: [id])
+  id           String     @id
+  barbershopId String
+  barberId     String
+  serviceId    String
+  customerId   String
+  startDate    DateTime
+  endDate      DateTime
+  status       String     @default("SCHEDULED")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       User       @relation("BarberAppointments", fields: [barberId], references: [id])
+  service      Service    @relation(fields: [serviceId], references: [id])
+  customer     Customer   @relation(fields: [customerId], references: [id])
 
   @@map("appointments")
+}
+
+model Customer {
+  id           String        @id
+  barbershopId String
+  name         String
+  phone        String
+  email        String?
+  isActive     Boolean       @default(true)
+  vip          Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  barbershop   Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@unique([barbershopId, phone])
+  @@map("customers")
+}
+
+model AuditLog {
+  id           String    @id
+  actorId      String?
+  actorType    String
+  actorRole    String?
+  barbershopId String?
+  action       String
+  entityType   String
+  entityId     String
+  before       Json?
+  after        Json?
+  createdAt    DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([barbershopId])
+  @@index([actorId])
+  @@map("audit_logs")
 }

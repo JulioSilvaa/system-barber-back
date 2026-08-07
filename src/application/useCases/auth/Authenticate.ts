@@ -16,7 +16,6 @@ export type AuthenticateOutputDTO = {
     name: string;
     email: string;
     phone: string;
-    globalRole: string;
     isActive: boolean;
     barbershopId?: string;
     localRole?: string;
@@ -51,7 +50,7 @@ export default class AuthenticateUserUseCase {
     }
 
     const activeMembership = await this.findActiveMembership(user.id);
-    const basePayload: TokenPayload = { sub: user.id, globalRole: user.globalRole };
+    const basePayload: TokenPayload = { sub: user.id, actor: 'USER' };
 
     if (activeMembership) {
       basePayload.barbershopId = activeMembership.barbershopId;
@@ -69,7 +68,6 @@ export default class AuthenticateUserUseCase {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        globalRole: user.globalRole,
         isActive: user.isActive,
         barbershopId: activeMembership?.barbershopId,
         localRole: activeMembership?.localRole,

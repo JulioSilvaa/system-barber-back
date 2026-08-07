@@ -1,28 +1,74 @@
 import { Router } from 'express';
 import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
 import BarbershopController from '../controllers/BarbershopController';
-import { requireAuth } from '@/infra/middleware/AuthMiddleware';
+import {
+  requireAuth,
+  requireBarbershopSelf,
+  resolveBarbershop,
+} from '@/infra/middleware/AuthMiddleware';
+import AuditService from '@/application/services/AuditService';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import HashRepository from '@/domain/repository/HashRepository';
+import { ITokenService } from '@/domain/repository/TokenService';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import IUserRepository from '@/domain/repository/UserRepository';
+import BcryptHashService from '@/infra/helpers/BcryptHash';
+import JwtTokenService from '@/infra/helpers/JwtTokenService';
+import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
+import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 
 export interface BarbershopRoutesDeps {
   barbershopRepository: IBarbershopRepository;
   userBarbershopRepository: IUserBarbershopRepository;
+  userRepository: IUserRepository;
+  hashService: HashRepository;
+  tokenService: ITokenService;
+  auditService: AuditService;
 }
 
-export default function createBarbershopRoutes(deps?: BarbershopRoutesDeps) {
+export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDeps>) {
   const router = Router();
 
   const barbershopRepository = deps?.barbershopRepository ?? new BarbershopRepositoryMemory();
   const userBarbershopRepository =
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
+  const userRepository = deps?.userRepository ?? new UserRepositoryMemory();
+  const hashService = deps?.hashService ?? new BcryptHashService();
+  const tokenService = deps?.tokenService ?? new JwtTokenService();
+  const auditService = deps?.auditService ?? new AuditService(new AuditRepositoryMemory());
 
-  const controller = new BarbershopController(barbershopRepository, userBarbershopRepository);
+  const controller = new BarbershopController(
+    barbershopRepository,
+    userBarbershopRepository,
+    hashService,
+    tokenService,
+    userRepository,
+    auditService,
+  );
 
-  router.post('/barbershops', requireAuth, ExpressAdapter.create(controller.create));
-  router.get('/barbershops', requireAuth, ExpressAdapter.create(controller.list));
+  router.post('/barbershops/login', ExpressAdapter.create(controller.login));
+  router.post('/barbershops', ExpressAdapter.create(controller.create));
+  router.get('/barbershops', ExpressAdapter.create(controller.list));
+  router.patch(
+    '/barbershops/:id/status',
+    requireAuth,
+    requireBarbershopSelf,
+    ExpressAdapter.create(controller.updateStatus),
+  );
+  router.get(
+    '/barbershops/:identifier/barbers',
+    resolveBarbershop(barbershopRepository),
+    ExpressAdapter.create(controller.listBarbers),
+  );
+
+  router.get(
+    '/barbershops/:barbershopId/employees',
+    requireAuth,
+    requireBarbershopSelf,
+    ExpressAdapter.create(controller.listStaff),
+  );
 
   return router;
 }

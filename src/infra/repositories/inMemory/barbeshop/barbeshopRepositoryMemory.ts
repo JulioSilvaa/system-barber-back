@@ -8,6 +8,12 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
     return this.barbershops.find(barbershop => barbershop.slug === slug) ?? null;
   }
 
+  async findByEmail(email: string): Promise<Barbershop | null> {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    return this.barbershops.find(barbershop => barbershop.email === normalizedEmail) ?? null;
+  }
+
   async save(barbershop: Barbershop): Promise<Barbershop> {
     this.barbershops.push(barbershop);
     return barbershop;
@@ -23,5 +29,27 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
 
   async findAll(): Promise<Barbershop[]> {
     return this.barbershops;
+  }
+
+  async setActive(id: string, isActive: boolean): Promise<Barbershop | null> {
+    const index = this.barbershops.findIndex(barbershop => barbershop.id === id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    const current = this.barbershops[index];
+    const updated = new Barbershop({
+      id: current.id,
+      name: current.name,
+      slug: current.slug,
+      email: current.email,
+      phone: current.phone,
+      password: current.password,
+      isActive,
+    });
+
+    this.barbershops[index] = updated;
+    return updated;
   }
 }

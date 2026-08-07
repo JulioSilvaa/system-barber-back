@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Appointment } from '@/domain/entities/Appointment';
+import { Customer } from '@/domain/entities/Customer';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
@@ -11,6 +14,7 @@ export type CreateAppointmentInputDTO = {
   serviceId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   startDate: Date;
 };
 
@@ -20,9 +24,11 @@ export default class CreateAppointmentUseCase {
     private readonly barbershopRepository: IBarbershopRepository,
     private readonly serviceRepository: IServiceRepository,
     private readonly userBarbershopRepository: IUserBarbershopRepository,
+    private readonly customerRepository: ICustomerRepository,
+    private readonly auditService?: AuditService,
   ) {}
 
-  async execute(input: CreateAppointmentInputDTO): Promise<Appointment> {
+  async execute(input: CreateAppointmentInputDTO, auditCtx?: AuditContext): Promise<Appointment> {
     if (!input.customerName || input.customerName.trim() === '') {
       throw new Error('Nome do cliente é obrigatório');
     }
@@ -53,6 +59,8 @@ export default class CreateAppointmentUseCase {
       throw new Error('Serviço não encontrado');
     }
 
+    const customer = await this.getOrCreateCustomer(input);
+
     const endDate = new Date(input.startDate.getTime() + service.durationMinutes * 60 * 1000);
 
     const appointment = new Appointment({
@@ -60,8 +68,7 @@ export default class CreateAppointmentUseCase {
       barbershopId: input.barbershopId,
       barberId: input.barberId,
       serviceId: input.serviceId,
-      customerName: input.customerName.trim(),
-      customerPhone: input.customerPhone.trim(),
+      customerId: customer.id,
       startDate: input.startDate,
       endDate,
     });
@@ -79,6 +86,46 @@ export default class CreateAppointmentUseCase {
       throw new Error('Já existe um agendamento neste horário');
     }
 
-    return this.appointmentRepository.save(appointment);
+    const saved = await this.appointmentRepository.save(appointment);
+
+    await this.auditService?.record({
+      ...auditCtx,
+      barbershopId: input.barbershopId,
+      action: 'CREATE',
+      entityType: 'APPOINTMENT',
+      entityId: saved.id,
+      after: {
+        id: saved.id,
+        barberId: saved.barberId,
+        serviceId: saved.serviceId,
+        customerId: saved.customerId,
+        startDate: saved.startDate,
+        endDate: saved.endDate,
+        status: saved.status,
+      },
+    });
+
+    return saved;
+  }
+
+  private async getOrCreateCustomer(input: CreateAppointmentInputDTO): Promise<Customer> {
+    const existing = await this.customerRepository.findByBarbershopAndPhone(
+      input.barbershopId,
+      input.customerPhone,
+    );
+
+    if (existing) {
+      return existing;
+    }
+
+    const customer = new Customer({
+      id: randomUUID(),
+      barbershopId: input.barbershopId,
+      name: input.customerName,
+      phone: input.customerPhone,
+      email: input.customerEmail,
+    });
+
+    return this.customerRepository.save(customer);
   }
 }

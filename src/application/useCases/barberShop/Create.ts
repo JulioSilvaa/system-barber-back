@@ -1,63 +1,105 @@
-import { randomUUID } from 'node:crypto';
-import { Barbershop, UserBarbershop } from '@/domain/entities';
+import AuditService, { AuditContext } from '@/application/services/AuditService';
+import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
-import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import BcryptHashService from '@/infra/helpers/BcryptHash';
 
 export type CreateBarberShopInputDTO = {
   name: string;
   slug: string;
+  email: string;
   phone: string;
-  password?: string;
-  ownerId?: string;
+  password: string;
 };
 
 export default class CreateBarberShopUseCase {
   private readonly _barbershopRepository: IBarbershopRepository;
   private readonly _idGenerator: IdGeneratorRepository;
-  private readonly _userBarbershopRepository?: IUserBarbershopRepository;
+  private readonly _hashRepository: HashRepository;
 
   constructor(
     barbershopRepository: IBarbershopRepository,
     idGenerator: IdGeneratorRepository,
-    userBarbershopRepository?: IUserBarbershopRepository,
+    hashRepository?: HashRepository,
+    private readonly auditService?: AuditService,
   ) {
     this._barbershopRepository = barbershopRepository;
     this._idGenerator = idGenerator;
-    this._userBarbershopRepository = userBarbershopRepository;
+    this._hashRepository = hashRepository ?? new BcryptHashService();
   }
 
-  async execute(input: CreateBarberShopInputDTO): Promise<Barbershop> {
+  async execute(input: CreateBarberShopInputDTO, auditCtx?: AuditContext): Promise<Barbershop> {
+    this.validateInput(input);
+    this.validatePasswordStrength(input.password);
+
     const existingBarbershop = await this._barbershopRepository.findBySlug(input.slug);
     if (existingBarbershop) {
       throw new Error('Slug já em uso');
     }
 
+    const existingByEmail = await this._barbershopRepository.findByEmail(input.email);
+    if (existingByEmail) {
+      throw new Error('Email já em uso');
+    }
+
+    const hashedPassword = await this._hashRepository.hash(input.password);
     const barbershop = new Barbershop({
       id: this._idGenerator.generate(),
       name: input.name,
       slug: input.slug,
+      email: input.email,
       phone: input.phone,
-      password: input.password,
+      password: hashedPassword,
     });
 
     await this._barbershopRepository.save(barbershop);
 
-    if (input.ownerId) {
-      if (!this._userBarbershopRepository) {
-        throw new Error('Repositório de vínculos não configurado');
-      }
-
-      await this._userBarbershopRepository.save(
-        new UserBarbershop({
-          id: randomUUID(),
-          userId: input.ownerId,
-          barbershopId: barbershop.id,
-          localRole: 'OWNER',
-        }),
-      );
-    }
+    await this.auditService?.record({
+      ...auditCtx,
+      barbershopId: barbershop.id,
+      action: 'CREATE',
+      entityType: 'BARBERSHOP',
+      entityId: barbershop.id,
+      after: {
+        id: barbershop.id,
+        name: barbershop.name,
+        slug: barbershop.slug,
+        email: barbershop.email,
+        isActive: barbershop.isActive,
+      },
+    });
 
     return barbershop;
+  }
+
+  private validateInput(input: CreateBarberShopInputDTO): void {
+    if (!input.name || input.name.trim() === '') {
+      throw new Error('Nome é obrigatório');
+    }
+
+    if (!input.email || input.email.trim() === '') {
+      throw new Error('Email é obrigatório');
+    }
+
+    if (!input.password || input.password.trim() === '') {
+      throw new Error('Senha é obrigatória');
+    }
+  }
+
+  private validatePasswordStrength(password: string): void {
+    if (password.length < 8 || password.length > 72) {
+      throw new Error('Senha deve ter entre 8 e 72 caracteres');
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      throw new Error(
+        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
+      );
+    }
   }
 }
