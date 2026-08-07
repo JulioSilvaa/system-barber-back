@@ -1,10 +1,18 @@
+import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { UserBarbershop } from '@/domain/entities';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
 export default class SwitchBarbershopUseCase {
-  constructor(private readonly userBarbershopRepository: IUserBarbershopRepository) {}
+  constructor(
+    private readonly userBarbershopRepository: IUserBarbershopRepository,
+    private readonly auditService?: AuditService,
+  ) {}
 
-  async execute(userId: string, barbershopId: string): Promise<UserBarbershop> {
+  async execute(
+    userId: string,
+    barbershopId: string,
+    auditCtx?: AuditContext,
+  ): Promise<UserBarbershop> {
     const memberships = await this.userBarbershopRepository.findByUserId(userId);
     const target = memberships.find(membership => membership.barbershopId === barbershopId);
 
@@ -20,6 +28,15 @@ export default class SwitchBarbershopUseCase {
       }
       await this.userBarbershopRepository.save(membership);
     }
+
+    await this.auditService?.record({
+      ...auditCtx,
+      barbershopId,
+      action: 'SWITCH',
+      entityType: 'MEMBERSHIP',
+      entityId: target.id,
+      after: { activeBarbershopId: barbershopId },
+    });
 
     return target;
   }

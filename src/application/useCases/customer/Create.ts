@@ -1,54 +1,58 @@
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
-import { Service } from '@/domain/entities/Service';
-import { IServiceRepository } from '@/domain/repository/ServiceRepository';
+import { Customer } from '@/domain/entities/Customer';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import ICustomerRepository from '@/domain/repository/CustomerRepository';
 
-export type CreateServiceInputDTO = {
+export type CreateCustomerInputDTO = {
   barbershopId: string;
   name: string;
-  priceCents: number;
-  durationMinutes: number;
+  phone: string;
+  email?: string;
 };
 
-export default class CreateServiceUseCase {
+export default class CreateCustomerUseCase {
   constructor(
-    private readonly serviceRepository: IServiceRepository,
+    private readonly customerRepository: ICustomerRepository,
     private readonly barbershopRepository: IBarbershopRepository,
     private readonly auditService?: AuditService,
   ) {}
 
-  async execute(input: CreateServiceInputDTO, auditCtx?: AuditContext): Promise<Service> {
-    if (!input.name || input.name.trim() === '') {
-      throw new Error('Nome do serviço é obrigatório');
-    }
-
+  async execute(input: CreateCustomerInputDTO, auditCtx?: AuditContext): Promise<Customer> {
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
       throw new Error('Barbearia não encontrada');
     }
 
-    const service = new Service({
+    const existing = await this.customerRepository.findByBarbershopAndPhone(
+      input.barbershopId,
+      input.phone,
+    );
+    if (existing) {
+      throw new Error('Cliente já cadastrado');
+    }
+
+    const customer = new Customer({
       id: randomUUID(),
       barbershopId: input.barbershopId,
-      name: input.name.trim(),
-      priceCents: input.priceCents,
-      durationMinutes: input.durationMinutes,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
     });
 
-    const saved = await this.serviceRepository.save(service);
+    const saved = await this.customerRepository.save(customer);
 
     await this.auditService?.record({
       ...auditCtx,
       barbershopId: input.barbershopId,
       action: 'CREATE',
-      entityType: 'SERVICE',
+      entityType: 'CUSTOMER',
       entityId: saved.id,
       after: {
         id: saved.id,
         name: saved.name,
-        priceCents: saved.priceCents,
-        durationMinutes: saved.durationMinutes,
+        phone: saved.phone,
+        vip: saved.vip,
         barbershopId: saved.barbershopId,
       },
     });

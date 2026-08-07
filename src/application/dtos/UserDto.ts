@@ -1,5 +1,3 @@
-import { GlobalUserRole } from '@/domain/entities/User';
-
 export interface CreateUserInputDTO {
   name: string;
   email: string;
@@ -12,6 +10,5 @@ export interface CreateUserOutputDTO {
   name: string;
   email: string;
   phone: string;
-  globalRole: GlobalUserRole;
   isActive: boolean;
 }

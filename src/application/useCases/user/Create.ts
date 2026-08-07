@@ -1,4 +1,5 @@
 import { CreateUserInputDTO, CreateUserOutputDTO } from '@/application/dtos/UserDto';
+import AuditService, { AuditContext } from '@/application/services/AuditService';
 import User from '@/domain/entities/User';
 import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
@@ -15,13 +16,14 @@ export default class CreateUserUseCase {
     userRepository: IUserRepository,
     hashRepository: HashRepository = new BcryptHashService(),
     idGenerator: IdGeneratorRepository = new CryptoUuidGenerator(),
+    private readonly auditService?: AuditService,
   ) {
     this._userRepository = userRepository;
     this._hashRepository = hashRepository;
     this._idGenerator = idGenerator;
   }
 
-  async execute(input: CreateUserInputDTO): Promise<CreateUserOutputDTO> {
+  async execute(input: CreateUserInputDTO, auditCtx?: AuditContext): Promise<CreateUserOutputDTO> {
     this.validateInput(input);
     this.validatePasswordStrength(input.password);
 
@@ -34,6 +36,18 @@ export default class CreateUserUseCase {
     const user = this.createUser(input, hashedPassword);
 
     await this._userRepository.save(user);
+
+    await this.auditService?.record({
+      ...auditCtx,
+      action: 'CREATE',
+      entityType: 'USER',
+      entityId: user.id,
+      after: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    });
 
     return this.toOutput(user);
   }
@@ -81,7 +95,6 @@ export default class CreateUserUseCase {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      globalRole: user.globalRole,
       isActive: user.isActive,
     };
   }
