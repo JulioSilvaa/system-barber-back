@@ -4,7 +4,6 @@ export type UserProps = {
   email: string;
   phone: string;
   password?: string;
-  globalRole?: 'USER' | 'SUPER_ADMIN';
   isActive?: boolean;
 };
 
@@ -13,18 +12,19 @@ export type UserBarbershopProps = {
   userId: string;
   barbershopId: string;
   status?: 'ACTIVE' | 'INACTIVE';
-  localRole?: 'OWNER' | 'BARBER';
+  localRole?: 'BARBER';
 };
 
 export type BarbershopProps = {
   id: string;
   name: string;
   slug: string;
+  email: string;
   phone: string;
+  password: string;
   primaryColor?: string;
   logoUrl?: string;
   isActive?: boolean;
-  password?: string;
 };
 
 export type ServiceProps = {
@@ -41,11 +41,19 @@ export type AppointmentProps = {
   barbershopId: string;
   barberId: string;
   serviceId: string;
-  customerName: string;
-  customerPhone: string;
+  customerId: string;
   startDate: Date;
   endDate: Date;
   status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+};
+
+export type CustomerProps = {
+  id: string;
+  barbershopId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  isActive?: boolean;
 };
 
 export function makeUserProps(overrides: Partial<UserProps> = {}): UserProps {
@@ -55,7 +63,6 @@ export function makeUserProps(overrides: Partial<UserProps> = {}): UserProps {
     email: 'joao@example.com',
     phone: '16999999999',
     password: 'Senha@123',
-    globalRole: 'USER',
     isActive: true,
     ...overrides,
   };
@@ -66,7 +73,9 @@ export function makeBarbershopProps(overrides: Partial<BarbershopProps> = {}): B
     id: 'barbershop-1',
     name: 'Barbearia Central',
     slug: 'barbearia-central',
+    email: 'contato@barbeariacentral.com',
     phone: '+5516999999999',
+    password: 'Senha@123',
     isActive: true,
     ...overrides,
   };
@@ -103,11 +112,21 @@ export function makeAppointmentProps(overrides: Partial<AppointmentProps> = {}):
     barbershopId: 'barbershop-1',
     barberId: 'user-2',
     serviceId: 'service-1',
-    customerName: 'Maria Souza',
-    customerPhone: '16988888888',
+    customerId: 'customer-1',
     startDate: new Date('2026-08-05T14:00:00.000Z'),
     endDate: new Date('2026-08-05T14:30:00.000Z'),
     status: 'SCHEDULED',
+    ...overrides,
+  };
+}
+
+export function makeCustomerProps(overrides: Partial<CustomerProps> = {}): CustomerProps {
+  return {
+    id: 'customer-1',
+    barbershopId: 'barbershop-1',
+    name: 'Maria Souza',
+    phone: '16988888888',
+    isActive: true,
     ...overrides,
   };
 }

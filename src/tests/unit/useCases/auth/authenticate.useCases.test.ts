@@ -66,7 +66,6 @@ describe('AuthenticateUserUseCase', () => {
           user: expect.objectContaining({
             id: VALID_USER_ID,
             email: inputMock.email,
-            globalRole: 'USER',
           }),
         }),
       );
@@ -87,7 +86,7 @@ describe('AuthenticateUserUseCase', () => {
       expect(tokenService.sign).toHaveBeenCalledWith(
         expect.objectContaining({
           sub: VALID_USER_ID,
-          globalRole: 'USER',
+          actor: 'USER',
           barbershopId: 'barbershop-1',
           localRole: 'BARBER',
         }),

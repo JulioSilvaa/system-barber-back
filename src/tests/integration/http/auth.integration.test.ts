@@ -16,7 +16,7 @@ function buildTestApp(userRepository: UserRepositoryMemory) {
   const tokenService = {
     sign: (_payload: object, expiresIn: string) =>
       expiresIn === '30m' ? generateAccessToken('user-1') : generateRefreshToken('user-1'),
-    verify: () => ({ sub: 'user-1', globalRole: 'USER', barbershopId: 'barbershop-1' }),
+    verify: () => ({ sub: 'user-1', actor: 'USER' as const, barbershopId: 'barbershop-1' }),
   };
 
   app.use('/api', createAuthRoutes({ userRepository, hashService, tokenService }));

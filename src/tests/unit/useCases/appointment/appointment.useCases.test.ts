@@ -11,6 +11,7 @@ import { makeAppointmentProps } from '@/tests/helpers/factories';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
+import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 
 describe('Appointment Use Cases Unit Tests', () => {
@@ -18,6 +19,7 @@ describe('Appointment Use Cases Unit Tests', () => {
   let serviceRepository: ServiceRepositoryMemory;
   let barbershopRepository: BarbershopRepositoryMemory;
   let userBarbershopRepository: UserBarbershopRepositoryMemory;
+  let customerRepository: CustomerRepositoryMemory;
 
   const BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
   const BARBER_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d480';
@@ -32,18 +34,30 @@ describe('Appointment Use Cases Unit Tests', () => {
     startDate: new Date('2026-08-10T14:00:00.000Z'),
   };
 
+  const makeCreateUseCase = () =>
+    new CreateAppointmentUseCase(
+      appointmentRepository,
+      barbershopRepository,
+      serviceRepository,
+      userBarbershopRepository,
+      customerRepository,
+    );
+
   beforeEach(async () => {
     appointmentRepository = new AppointmentRepositoryMemory();
     serviceRepository = new ServiceRepositoryMemory();
     barbershopRepository = new BarbershopRepositoryMemory();
     userBarbershopRepository = new UserBarbershopRepositoryMemory();
+    customerRepository = new CustomerRepositoryMemory();
 
     await barbershopRepository.save(
       new Barbershop({
         id: BARBERSHOP_ID,
         name: 'Barbearia Central',
         slug: 'barbearia-central',
+        email: 'contato@barbeariacentral.com',
         phone: '+5516999999999',
+        password: 'SenhaForte1',
       }),
     );
 
@@ -69,21 +83,14 @@ describe('Appointment Use Cases Unit Tests', () => {
 
   describe('CreateAppointmentUseCase', () => {
     it('deve criar e salvar um agendamento com endDate calculado pela duração do serviço', async () => {
-      const useCase = new CreateAppointmentUseCase(
-        appointmentRepository,
-        barbershopRepository,
-        serviceRepository,
-        userBarbershopRepository,
-      );
-
-      const output = await useCase.execute(inputMock);
+      const output = await makeCreateUseCase().execute(inputMock);
 
       expect(output).toEqual(
         expect.objectContaining({
           barbershopId: BARBERSHOP_ID,
           barberId: BARBER_ID,
           serviceId: SERVICE_ID,
-          customerName: 'Maria Souza',
+          customerId: expect.any(String),
           status: 'SCHEDULED',
           startDate: inputMock.startDate,
           endDate: new Date('2026-08-10T14:30:00.000Z'),
@@ -91,57 +98,53 @@ describe('Appointment Use Cases Unit Tests', () => {
       );
     });
 
-    it('deve lançar erro quando o cliente não é informado', async () => {
-      const useCase = new CreateAppointmentUseCase(
-        appointmentRepository,
-        barbershopRepository,
-        serviceRepository,
-        userBarbershopRepository,
+    it('deve criar um cliente novo quando o telefone ainda não existe na barbearia', async () => {
+      const output = await makeCreateUseCase().execute(inputMock);
+
+      const customer = await customerRepository.findByBarbershopAndPhone(
+        BARBERSHOP_ID,
+        '16988888888',
       );
 
-      await expect(useCase.execute({ ...inputMock, customerName: '' })).rejects.toThrow(
+      expect(customer).toBeTruthy();
+      expect(customer?.name).toBe('Maria Souza');
+      expect(output.customerId).toBe(customer?.id);
+    });
+
+    it('deve reutilizar o cliente existente com o mesmo telefone na mesma barbearia', async () => {
+      const first = await makeCreateUseCase().execute(inputMock);
+      const second = await makeCreateUseCase().execute({
+        ...inputMock,
+        startDate: new Date('2026-08-10T15:00:00.000Z'),
+      });
+
+      expect(second.customerId).toBe(first.customerId);
+      expect(await customerRepository.findByBarbershop(BARBERSHOP_ID)).toHaveLength(1);
+    });
+
+    it('deve lançar erro quando o cliente não é informado', async () => {
+      await expect(makeCreateUseCase().execute({ ...inputMock, customerName: '' })).rejects.toThrow(
         'Nome do cliente é obrigatório',
       );
     });
 
     it('deve lançar erro quando o barbeiro não tem vínculo ativo', async () => {
-      const useCase = new CreateAppointmentUseCase(
-        appointmentRepository,
-        barbershopRepository,
-        serviceRepository,
-        userBarbershopRepository,
-      );
-
       await expect(
-        useCase.execute({ ...inputMock, barberId: 'barbeiro-sem-vinculo' }),
+        makeCreateUseCase().execute({ ...inputMock, barberId: 'barbeiro-sem-vinculo' }),
       ).rejects.toThrow('Barbeiro não encontrado');
     });
 
     it('deve lançar erro quando o serviço não pertence à barbearia', async () => {
-      const useCase = new CreateAppointmentUseCase(
-        appointmentRepository,
-        barbershopRepository,
-        serviceRepository,
-        userBarbershopRepository,
-      );
-
       await expect(
-        useCase.execute({ ...inputMock, serviceId: 'servico-inexistente' }),
+        makeCreateUseCase().execute({ ...inputMock, serviceId: 'servico-inexistente' }),
       ).rejects.toThrow('Serviço não encontrado');
     });
 
     it('deve lançar erro quando já existe agendamento no mesmo horário', async () => {
-      const useCase = new CreateAppointmentUseCase(
-        appointmentRepository,
-        barbershopRepository,
-        serviceRepository,
-        userBarbershopRepository,
-      );
-
-      await useCase.execute(inputMock);
+      await makeCreateUseCase().execute(inputMock);
 
       await expect(
-        useCase.execute({
+        makeCreateUseCase().execute({
           ...inputMock,
           startDate: new Date('2026-08-10T14:15:00.000Z'),
         }),

@@ -1,29 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateBarberShopUseCase from '@/application/useCases/barberShop/Create';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
-import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
+import BcryptHashService from '@/infra/helpers/BcryptHash';
 
 describe('CreateBarberShopUseCase Unit Tests', () => {
   const BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
   let barbershopRepository: BarbershopRepositoryMemory;
-  let userBarbershopRepository: UserBarbershopRepositoryMemory;
   let createUseCase: CreateBarberShopUseCase;
 
   const inputMock = {
     name: 'Barbearia Central',
     slug: 'barbearia-central',
+    email: 'contato@barbeariacentral.com',
     phone: '+5516999999999',
     password: 'SenhaForte1',
   };
 
   beforeEach(() => {
     barbershopRepository = new BarbershopRepositoryMemory();
-    userBarbershopRepository = new UserBarbershopRepositoryMemory();
     createUseCase = new CreateBarberShopUseCase(
       barbershopRepository,
       { generate: vi.fn().mockReturnValue(BARBERSHOP_ID) },
-      userBarbershopRepository,
+      new BcryptHashService(),
     );
   });
 
@@ -38,32 +37,22 @@ describe('CreateBarberShopUseCase Unit Tests', () => {
           id: BARBERSHOP_ID,
           name: inputMock.name,
           slug: inputMock.slug,
+          email: inputMock.email,
           phone: inputMock.phone,
           isActive: true,
         }),
       );
+      expect(output.password).not.toBe(inputMock.password);
       expect(saved).toBeTruthy();
     });
 
-    it('deve criar o vínculo de OWNER quando ownerId é informado', async () => {
-      await createUseCase.execute({ ...inputMock, ownerId: 'user-owner' });
+    it('deve criar a barbearia sem nenhum vínculo de membro (o dono é a própria conta)', async () => {
+      const output = await createUseCase.execute(inputMock);
 
-      const memberships = await userBarbershopRepository.findByUserAndBarbershop(
-        'user-owner',
-        BARBERSHOP_ID,
-      );
-
-      expect(memberships).toBeTruthy();
-      expect(memberships?.localRole).toBe('OWNER');
-      expect(memberships?.status).toBe('ACTIVE');
-    });
-
-    it('não deve criar vínculo quando ownerId não é informado', async () => {
-      await createUseCase.execute(inputMock);
-
-      const memberships = await userBarbershopRepository.findByUserId('user-owner');
-
-      expect(memberships).toEqual([]);
+      const saved = await barbershopRepository.findById(BARBERSHOP_ID);
+      expect(output.id).toBe(BARBERSHOP_ID);
+      expect(saved).toBeTruthy();
+      expect(saved).not.toHaveProperty('memberships');
     });
   });
 
@@ -85,6 +74,20 @@ describe('CreateBarberShopUseCase Unit Tests', () => {
     it('deve lançar erro quando o telefone é inválido', async () => {
       await expect(createUseCase.execute({ ...inputMock, phone: '123' })).rejects.toThrow(
         'phone must be a valid international phone number',
+      );
+    });
+
+    it('deve lançar erro quando o email já está em uso', async () => {
+      await createUseCase.execute(inputMock);
+
+      await expect(
+        createUseCase.execute({ ...inputMock, slug: 'outra-barbearia' }),
+      ).rejects.toThrow('Email já em uso');
+    });
+
+    it('deve lançar erro quando a senha é fraca', async () => {
+      await expect(createUseCase.execute({ ...inputMock, password: 'fraca' })).rejects.toThrow(
+        'Senha deve ter entre 8 e 72 caracteres',
       );
     });
   });

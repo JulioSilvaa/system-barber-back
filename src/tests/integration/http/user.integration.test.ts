@@ -40,21 +40,25 @@ describe('User HTTP Integration', () => {
   });
 
   function adminAuth() {
-    return `Bearer ${tokenService.sign({ sub: 'admin-1', globalRole: 'SUPER_ADMIN' }, '30m')}`;
+    return `Bearer ${tokenService.sign({ sub: 'admin-1', actor: 'ADMIN' }, '30m')}`;
+  }
+
+  function barbershopAuth(barbershopId = 'barbershop-1') {
+    return `Bearer ${tokenService.sign({ sub: barbershopId, actor: 'BARBERSHOP' }, '30m')}`;
   }
 
   function userAuth() {
-    return `Bearer ${tokenService.sign({ sub: 'user-1', globalRole: 'USER' }, '30m')}`;
+    return `Bearer ${tokenService.sign({ sub: 'user-1', actor: 'USER' }, '30m')}`;
   }
 
   describe('POST /api/users', () => {
-    it('deve criar um usuário global via HTTP (requer token de administrador)', async () => {
+    it('deve criar um usuário global via HTTP (requer token da própria barbearia)', async () => {
       const { app } = buildTestApp();
 
       const response = await request(app)
         .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send(validPayload);
+        .set('Authorization', barbershopAuth())
+        .send({ ...validPayload, barbershopId: 'barbershop-1' });
 
       expect(response.status).toBe(201);
       expect(response.body).toEqual(
@@ -62,24 +66,12 @@ describe('User HTTP Integration', () => {
           email: validPayload.email,
           name: validPayload.name,
           phone: validPayload.phone,
-          globalRole: 'USER',
           isActive: true,
         }),
       );
+      expect(response.body).not.toHaveProperty('globalRole');
       expect(response.body).not.toHaveProperty('barbershopId');
       expect(response.body).not.toHaveProperty('role');
-    });
-
-    it('deve ignorar tentativa de elevar o papel global pelo corpo da requisição', async () => {
-      const { app } = buildTestApp();
-
-      const response = await request(app)
-        .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, globalRole: 'SUPER_ADMIN' });
-
-      expect(response.status).toBe(201);
-      expect(response.body.globalRole).toBe('USER');
     });
 
     it('deve retornar 401 quando não há token', async () => {
@@ -90,13 +82,24 @@ describe('User HTTP Integration', () => {
       expect(response.status).toBe(401);
     });
 
-    it('deve retornar 403 quando um usuário comum tenta criar um usuário sem ser dono', async () => {
+    it('deve retornar 403 quando um usuário comum tenta criar um usuário', async () => {
       const { app } = buildTestApp();
 
       const response = await request(app)
         .post('/api/users')
         .set('Authorization', userAuth())
-        .send(validPayload);
+        .send({ ...validPayload, barbershopId: 'barbershop-1' });
+
+      expect(response.status).toBe(403);
+    });
+
+    it('deve retornar 403 quando a barbearia do token não bate com a do corpo', async () => {
+      const { app } = buildTestApp();
+
+      const response = await request(app)
+        .post('/api/users')
+        .set('Authorization', barbershopAuth('barbershop-2'))
+        .send({ ...validPayload, barbershopId: 'barbershop-1' });
 
       expect(response.status).toBe(403);
     });
@@ -106,8 +109,8 @@ describe('User HTTP Integration', () => {
 
       const response = await request(app)
         .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, name: '' });
+        .set('Authorization', barbershopAuth())
+        .send({ ...validPayload, name: '', barbershopId: 'barbershop-1' });
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(expect.objectContaining({ message: 'Nome é obrigatório' }));
@@ -115,13 +118,13 @@ describe('User HTTP Integration', () => {
   });
 
   describe('GET /api/users', () => {
-    it('deve listar todos os usuários via HTTP', async () => {
+    it('deve listar todos os usuários via HTTP (somente admin)', async () => {
       const { app } = buildTestApp();
 
       await request(app)
         .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, email: 'list-user@example.com' });
+        .set('Authorization', barbershopAuth())
+        .send({ ...validPayload, email: 'list-user@example.com', barbershopId: 'barbershop-1' });
 
       const response = await request(app).get('/api/users').set('Authorization', adminAuth());
 
@@ -137,16 +140,24 @@ describe('User HTTP Integration', () => {
 
       expect(response.status).toBe(401);
     });
+
+    it('deve retornar 403 para quem não é admin', async () => {
+      const { app } = buildTestApp();
+
+      const response = await request(app).get('/api/users').set('Authorization', userAuth());
+
+      expect(response.status).toBe(403);
+    });
   });
 
   describe('DELETE /api/users/:id', () => {
-    it('deve deletar um usuário via HTTP', async () => {
+    it('deve deletar um usuário via HTTP (somente admin)', async () => {
       const { app } = buildTestApp();
 
       const createResponse = await request(app)
         .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, email: 'delete-user@example.com' });
+        .set('Authorization', barbershopAuth())
+        .send({ ...validPayload, email: 'delete-user@example.com', barbershopId: 'barbershop-1' });
       const userId = createResponse.body.id;
 
       const deleteResponse = await request(app)
@@ -170,37 +181,6 @@ describe('User HTTP Integration', () => {
     });
   });
 
-  describe('PATCH /api/users/:id/role', () => {
-    it('deve permitir que o SUPER_ADMIN altere o papel de um usuário', async () => {
-      const { app } = buildTestApp();
-
-      const createResponse = await request(app)
-        .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, email: 'role-user@example.com' });
-      const userId = createResponse.body.id;
-
-      const response = await request(app)
-        .patch(`/api/users/${userId}/role`)
-        .set('Authorization', adminAuth())
-        .send({ globalRole: 'SUPER_ADMIN' });
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({ id: userId, globalRole: 'SUPER_ADMIN' });
-    });
-
-    it('deve retornar 403 quando um usuário comum tenta alterar papel', async () => {
-      const { app } = buildTestApp();
-
-      const response = await request(app)
-        .patch('/api/users/123e4567-e89b-41d3-a456-426614174000/role')
-        .set('Authorization', userAuth())
-        .send({ globalRole: 'SUPER_ADMIN' });
-
-      expect(response.status).toBe(403);
-    });
-  });
-
   describe('Isolamento de estado', () => {
     it('não deve compartilhar repositório entre apps distintos', async () => {
       const { app: appA } = buildTestApp();
@@ -208,8 +188,8 @@ describe('User HTTP Integration', () => {
 
       await request(appA)
         .post('/api/users')
-        .set('Authorization', adminAuth())
-        .send({ ...validPayload, email: 'isolado@example.com' });
+        .set('Authorization', barbershopAuth())
+        .send({ ...validPayload, email: 'isolado@example.com', barbershopId: 'barbershop-1' });
 
       const responseB = await request(appB).get('/api/users').set('Authorization', adminAuth());
 

@@ -1,15 +1,22 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { Appointment, Barbershop, Service, User, UserBarbershop } from '@/domain/entities';
+import {
+  Appointment,
+  Barbershop,
+  Customer,
+  Service,
+  User,
+  UserBarbershop,
+} from '@/domain/entities';
 import { createPrismaClient } from '@/infra/database/prisma';
-import JwtTokenService from '@/infra/helpers/JwtTokenService';
+import BcryptHashService from '@/infra/helpers/BcryptHash';
 import { createApp } from '@/infra/http/express/app';
 import { createPrismaRepositorySet, RepositorySet } from '@/infra/repositories/factory';
 import { TEST_DATABASE_URL } from '@/tests/database/globalSetup';
 import type { PrismaClient } from '@/generated/prisma/client';
 
-describe('Database Integration (SQLite)', () => {
+describe('Database Integration (PostgreSQL)', () => {
   let prisma: PrismaClient;
   let repositories: RepositorySet;
 
@@ -19,6 +26,29 @@ describe('Database Integration (SQLite)', () => {
     phone: '11999999999',
     password: 'SenhaForte123',
   };
+
+  const hashService = new BcryptHashService();
+
+  async function makeUser(props: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) {
+    return new User({ ...props, password: await hashService.hash(props.password) });
+  }
+
+  async function makeBarbershop(props: {
+    id: string;
+    name: string;
+    slug: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) {
+    return new Barbershop({ ...props, password: await hashService.hash(props.password) });
+  }
 
   beforeAll(() => {
     prisma = createPrismaClient(TEST_DATABASE_URL);
@@ -31,6 +61,7 @@ describe('Database Integration (SQLite)', () => {
 
   beforeEach(async () => {
     await prisma.appointment.deleteMany();
+    await prisma.customer.deleteMany();
     await prisma.service.deleteMany();
     await prisma.userBarbershop.deleteMany();
     await prisma.barbershop.deleteMany();
@@ -39,7 +70,7 @@ describe('Database Integration (SQLite)', () => {
 
   describe('UserRepository', () => {
     it('deve salvar e buscar um usuário por id e email (case-insensitive)', async () => {
-      const user = new User({ id: 'u-1', ...adminProps });
+      const user = await makeUser({ id: 'u-1', ...adminProps });
 
       await repositories.userRepository.save(user);
 
@@ -49,11 +80,10 @@ describe('Database Integration (SQLite)', () => {
       expect(byId).not.toBeNull();
       expect(byId?.name).toBe('Admin DB');
       expect(byEmail?.id).toBe('u-1');
-      expect(byEmail?.globalRole).toBe('USER');
     });
 
     it('deve listar usuários e apagar um usuário', async () => {
-      await repositories.userRepository.save(new User({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
 
       const list = await repositories.userRepository.list();
       expect(list).toHaveLength(1);
@@ -63,31 +93,31 @@ describe('Database Integration (SQLite)', () => {
     });
 
     it('deve atualizar um usuário existente (upsert)', async () => {
-      await repositories.userRepository.save(new User({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
 
-      const updated = new User({
+      const updated = await makeUser({
         id: 'u-1',
         name: 'Admin Renomeado',
         email: 'admin-db@example.com',
         phone: '11999999999',
         password: 'SenhaForte123',
-        globalRole: 'SUPER_ADMIN',
       });
       await repositories.userRepository.save(updated);
 
       const found = await repositories.userRepository.findById('u-1');
       expect(found?.name).toBe('Admin Renomeado');
-      expect(found?.globalRole).toBe('SUPER_ADMIN');
     });
   });
 
   describe('BarbershopRepository', () => {
     it('deve salvar e buscar uma barbearia por id e slug', async () => {
-      const barbershop = new Barbershop({
+      const barbershop = await makeBarbershop({
         id: 'b-1',
         name: 'Barbearia DB',
         slug: 'barbearia-db',
+        email: 'barbearia-db@example.com',
         phone: '11999999999',
+        password: 'SenhaForte1',
       });
 
       await repositories.barbershopRepository.save(barbershop);
@@ -102,13 +132,15 @@ describe('Database Integration (SQLite)', () => {
 
   describe('UserBarbershopRepository', () => {
     it('deve salvar um vínculo e listar os vínculos de um usuário', async () => {
-      await repositories.userRepository.save(new User({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
       await repositories.barbershopRepository.save(
-        new Barbershop({
+        await makeBarbershop({
           id: 'b-1',
           name: 'Barbearia DB',
           slug: 'barbearia-db',
+          email: 'barbearia-db@example.com',
           phone: '11999999999',
+          password: 'SenhaForte1',
         }),
       );
 
@@ -116,14 +148,14 @@ describe('Database Integration (SQLite)', () => {
         id: 'm-1',
         userId: 'u-1',
         barbershopId: 'b-1',
-        localRole: 'OWNER',
+        localRole: 'BARBER',
       });
 
       await repositories.userBarbershopRepository.save(membership);
 
       const byUser = await repositories.userBarbershopRepository.findByUserId('u-1');
       expect(byUser).toHaveLength(1);
-      expect(byUser[0].isOwner()).toBe(true);
+      expect(byUser[0].isBarber()).toBe(true);
 
       const byBoth = await repositories.userBarbershopRepository.findByUserAndBarbershop(
         'u-1',
@@ -136,11 +168,13 @@ describe('Database Integration (SQLite)', () => {
   describe('ServiceRepository', () => {
     it('deve salvar e listar serviços de uma barbearia', async () => {
       await repositories.barbershopRepository.save(
-        new Barbershop({
+        await makeBarbershop({
           id: 'b-1',
           name: 'Barbearia DB',
           slug: 'barbearia-db',
+          email: 'barbearia-db@example.com',
           phone: '11999999999',
+          password: 'SenhaForte1',
         }),
       );
 
@@ -166,13 +200,15 @@ describe('Database Integration (SQLite)', () => {
 
   describe('AppointmentRepository', () => {
     it('deve salvar um agendamento e filtrar por barbeiro e dia', async () => {
-      await repositories.userRepository.save(new User({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
       await repositories.barbershopRepository.save(
-        new Barbershop({
+        await makeBarbershop({
           id: 'b-1',
           name: 'Barbearia DB',
           slug: 'barbearia-db',
+          email: 'barbearia-db@example.com',
           phone: '11999999999',
+          password: 'SenhaForte1',
         }),
       );
       await repositories.serviceRepository.save(
@@ -185,6 +221,15 @@ describe('Database Integration (SQLite)', () => {
         }),
       );
 
+      await repositories.customerRepository.save(
+        new Customer({
+          id: 'c-1',
+          barbershopId: 'b-1',
+          name: 'Cliente',
+          phone: '11988888888',
+        }),
+      );
+
       const startDate = new Date('2026-08-10T10:00:00.000Z');
       const endDate = new Date('2026-08-10T10:30:00.000Z');
 
@@ -193,8 +238,7 @@ describe('Database Integration (SQLite)', () => {
         barbershopId: 'b-1',
         barberId: 'u-1',
         serviceId: 's-1',
-        customerName: 'Cliente',
-        customerPhone: '11988888888',
+        customerId: 'c-1',
         startDate,
         endDate,
       });
@@ -202,7 +246,7 @@ describe('Database Integration (SQLite)', () => {
       await repositories.appointmentRepository.save(appointment);
 
       const byId = await repositories.appointmentRepository.findById('a-1', 'b-1');
-      expect(byId?.customerName).toBe('Cliente');
+      expect(byId?.customerId).toBe('c-1');
 
       const sameDay = await repositories.appointmentRepository.findByBarberAndDate(
         'u-1',
@@ -232,9 +276,83 @@ describe('Database Integration (SQLite)', () => {
     });
   });
 
+  describe('CustomerRepository', () => {
+    it('deve salvar e buscar clientes de uma barbearia', async () => {
+      await repositories.barbershopRepository.save(
+        await makeBarbershop({
+          id: 'b-1',
+          name: 'Barbearia DB',
+          slug: 'barbearia-db',
+          email: 'barbearia-db@example.com',
+          phone: '11999999999',
+          password: 'SenhaForte1',
+        }),
+      );
+
+      const customer = new Customer({
+        id: 'c-1',
+        barbershopId: 'b-1',
+        name: 'Maria Souza',
+        phone: '11988888888',
+      });
+
+      await repositories.customerRepository.save(customer);
+
+      const byId = await repositories.customerRepository.findById('c-1', 'b-1');
+      const byPhone = await repositories.customerRepository.findByBarbershopAndPhone(
+        'b-1',
+        '11988888888',
+      );
+      const otherBarbershop = await repositories.customerRepository.findById('c-1', 'b-2');
+
+      expect(byId?.name).toBe('Maria Souza');
+      expect(byPhone?.id).toBe('c-1');
+      expect(otherBarbershop).toBeNull();
+
+      const list = await repositories.customerRepository.findByBarbershop('b-1');
+      expect(list).toHaveLength(1);
+    });
+
+    it('deve garantir unicidade de telefone por barbearia', async () => {
+      await repositories.barbershopRepository.save(
+        await makeBarbershop({
+          id: 'b-1',
+          name: 'Barbearia DB',
+          slug: 'barbearia-db',
+          email: 'barbearia-db@example.com',
+          phone: '11999999999',
+          password: 'SenhaForte1',
+        }),
+      );
+      await repositories.barbershopRepository.save(
+        await makeBarbershop({
+          id: 'b-2',
+          name: 'Barbearia Norte',
+          slug: 'barbearia-norte',
+          email: 'barbearia-norte@example.com',
+          phone: '11988888888',
+          password: 'SenhaForte1',
+        }),
+      );
+
+      await repositories.customerRepository.save(
+        new Customer({ id: 'c-1', barbershopId: 'b-1', name: 'Maria', phone: '11988888888' }),
+      );
+      await repositories.customerRepository.save(
+        new Customer({ id: 'c-2', barbershopId: 'b-2', name: 'João', phone: '11988888888' }),
+      );
+
+      const byPhone = await repositories.customerRepository.findByBarbershopAndPhone(
+        'b-2',
+        '11988888888',
+      );
+      expect(byPhone?.id).toBe('c-2');
+    });
+  });
+
   describe('Persistência', () => {
     it('deve persistir dados no arquivo entre instâncias do client', async () => {
-      const user = new User({ id: 'u-persist', ...adminProps });
+      const user = await makeUser({ id: 'u-persist', ...adminProps });
       await repositories.userRepository.save(user);
 
       const secondClient = createPrismaClient(TEST_DATABASE_URL);
@@ -248,57 +366,62 @@ describe('Database Integration (SQLite)', () => {
     });
   });
 
-  describe('Fluxo HTTP completo com SQLite', () => {
-    it('deve criar barbearia via HTTP e persistir no banco', async () => {
-      const tokenService = new JwtTokenService();
-
-      await repositories.userRepository.save(new User({ id: 'admin-1', ...adminProps }));
-
+  describe('Fluxo HTTP completo com PostgreSQL', () => {
+    it('deve criar barbearia via HTTP (público) e persistir no banco', async () => {
       const app = createApp({ repositories });
 
-      const token = tokenService.sign({ sub: 'admin-1', globalRole: 'SUPER_ADMIN' }, '30m');
-
-      const response = await request(app)
-        .post('/api/barbershops')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ name: 'Barbearia HTTP', slug: 'barbearia-http', phone: '11999999999' });
+      const response = await request(app).post('/api/barbershops').send({
+        name: 'Barbearia HTTP',
+        slug: 'barbearia-http',
+        email: 'barbearia-http@example.com',
+        phone: '11999999999',
+        password: 'SenhaForte1',
+      });
 
       expect(response.status).toBe(201);
 
       const persisted = await repositories.barbershopRepository.findBySlug('barbearia-http');
       expect(persisted).not.toBeNull();
-
-      const membership = await repositories.userBarbershopRepository.findByUserId('admin-1');
-      expect(membership).toHaveLength(1);
-      expect(membership[0].isOwner()).toBe(true);
+      expect(persisted?.isActive).toBe(true);
     });
 
     it('deve criar serviço e agendamento via HTTP e persistir no banco', async () => {
-      const tokenService = new JwtTokenService();
-
-      await repositories.userRepository.save(new User({ id: 'owner-1', ...adminProps }));
-      await repositories.barbershopRepository.save(
-        new Barbershop({
-          id: 'b-flow',
-          name: 'Barbearia Flow',
-          slug: 'barbearia-flow',
-          phone: '11999999999',
-        }),
-      );
-      await repositories.userBarbershopRepository.save(
-        new UserBarbershop({
-          id: 'm-flow',
-          userId: 'owner-1',
-          barbershopId: 'b-flow',
-          localRole: 'OWNER',
-        }),
-      );
-
       const app = createApp({ repositories });
-      const token = tokenService.sign({ sub: 'owner-1', globalRole: 'USER' }, '30m');
+
+      const createBarbershop = await request(app).post('/api/barbershops').send({
+        name: 'Barbearia Flow',
+        slug: 'barbearia-flow',
+        email: 'barbearia-flow@example.com',
+        phone: '11999999999',
+        password: 'SenhaForte1',
+      });
+
+      expect(createBarbershop.status).toBe(201);
+      const barbershopId = createBarbershop.body.id as string;
+
+      const login = await request(app)
+        .post('/api/barbershops/login')
+        .send({ email: 'barbearia-flow@example.com', password: 'SenhaForte1' });
+
+      expect(login.status).toBe(200);
+      const token = login.body.accessToken as string;
+
+      const createBarber = await request(app)
+        .post('/api/users')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          name: 'Barbeiro Flow',
+          email: 'barbeiro-flow@example.com',
+          phone: '11977777777',
+          password: 'SenhaForte1',
+          barbershopId,
+        });
+
+      expect(createBarber.status).toBe(201);
+      const barberId = createBarber.body.id as string;
 
       const createService = await request(app)
-        .post('/api/barbershops/b-flow/services')
+        .post(`/api/barbershops/${barbershopId}/services`)
         .set('Authorization', `Bearer ${token}`)
         .send({ name: 'Corte', priceCents: 3500, durationMinutes: 30 });
 
@@ -306,10 +429,9 @@ describe('Database Integration (SQLite)', () => {
       const serviceId = createService.body.id as string;
 
       const createAppointment = await request(app)
-        .post('/api/barbershops/b-flow/appointments')
-        .set('Authorization', `Bearer ${token}`)
+        .post(`/api/barbershops/${barbershopId}/appointments`)
         .send({
-          barberId: 'owner-1',
+          barberId,
           serviceId,
           customerName: 'Cliente Flow',
           customerPhone: '11988888888',
@@ -320,7 +442,7 @@ describe('Database Integration (SQLite)', () => {
       expect(createAppointment.body.status).toBe('SCHEDULED');
 
       const listDay = await request(app)
-        .get('/api/barbershops/b-flow/appointments?date=2026-08-10')
+        .get(`/api/barbershops/${barbershopId}/appointments?date=2026-08-10`)
         .set('Authorization', `Bearer ${token}`);
 
       expect(listDay.status).toBe(200);
@@ -329,14 +451,23 @@ describe('Database Integration (SQLite)', () => {
         expect.objectContaining({ customerName: 'Cliente Flow', status: 'SCHEDULED' }),
       );
 
-      const persistedService = await repositories.serviceRepository.findById(serviceId, 'b-flow');
+      const persistedService = await repositories.serviceRepository.findById(
+        serviceId,
+        barbershopId,
+      );
       expect(persistedService?.name).toBe('Corte');
 
       const persistedAppointment = await repositories.appointmentRepository.findById(
         createAppointment.body.id,
-        'b-flow',
+        barbershopId,
       );
-      expect(persistedAppointment?.customerName).toBe('Cliente Flow');
+      expect(persistedAppointment?.customerId).toBeTruthy();
+
+      const persistedCustomer = await repositories.customerRepository.findByBarbershopAndPhone(
+        barbershopId,
+        '11988888888',
+      );
+      expect(persistedCustomer?.name).toBe('Cliente Flow');
     });
   });
 });

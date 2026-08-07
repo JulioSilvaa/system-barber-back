@@ -12,7 +12,7 @@ describe('Appointment Entity', () => {
       expect(appointment.barbershopId).toBe('barbershop-1');
       expect(appointment.barberId).toBe('user-2');
       expect(appointment.serviceId).toBe('service-1');
-      expect(appointment.customerName).toBe('Maria Souza');
+      expect(appointment.customerId).toBe('customer-1');
       expect(appointment.status).toBe('SCHEDULED');
     });
 
