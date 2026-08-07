@@ -7,8 +7,9 @@ function toEntity(row: PrismaBarbershop): Barbershop {
     id: row.id,
     name: row.name,
     slug: row.slug,
+    email: row.email,
     phone: row.phone,
-    password: row.password ?? undefined,
+    password: row.password,
     isActive: row.isActive,
   });
 }
@@ -26,13 +27,26 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
     return row ? toEntity(row) : null;
   }
 
+  async findByEmail(email: string): Promise<Barbershop | null> {
+    const row = await this.prisma.barbershop.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    return row ? toEntity(row) : null;
+  }
+
+  async findAll(): Promise<Barbershop[]> {
+    const rows = await this.prisma.barbershop.findMany({ orderBy: { createdAt: 'asc' } });
+    return rows.map(toEntity);
+  }
+
   async save(barbershop: Barbershop): Promise<Barbershop> {
     const data = {
       id: barbershop.id,
       name: barbershop.name,
       slug: barbershop.slug,
+      email: barbershop.email,
       phone: barbershop.phone,
-      password: barbershop.password ?? null,
+      password: barbershop.password,
       isActive: barbershop.isActive,
     };
 
@@ -43,5 +57,19 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
     });
 
     return barbershop;
+  }
+
+  async setActive(id: string, isActive: boolean): Promise<Barbershop | null> {
+    const result = await this.prisma.barbershop.updateMany({
+      where: { id },
+      data: { isActive },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    const row = await this.prisma.barbershop.findUnique({ where: { id } });
+    return row ? toEntity(row) : null;
   }
 }

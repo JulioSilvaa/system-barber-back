@@ -54,4 +54,33 @@ export default class UserBarbershopRepositoryPrisma implements IUserBarbershopRe
     });
     return row ? toEntity(row) : null;
   }
+
+  async findActiveByBarbershop(barbershopId: string): Promise<UserBarbershop[]> {
+    const rows = await this.prisma.userBarbershop.findMany({
+      where: { barbershopId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
+  async findByBarbershop(barbershopId: string): Promise<UserBarbershop[]> {
+    const rows = await this.prisma.userBarbershop.findMany({
+      where: { barbershopId },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
+  async findById(id: string): Promise<UserBarbershop | null> {
+    const row = await this.prisma.userBarbershop.findUnique({ where: { id } });
+    return row ? toEntity(row) : null;
+  }
+
+  async delete(id: string): Promise<void> {
+    try {
+      await this.prisma.userBarbershop.delete({ where: { id } });
+    } catch {
+      throw new Error('Vínculo não encontrado');
+    }
+  }
 }

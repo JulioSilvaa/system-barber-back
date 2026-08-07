@@ -30,4 +30,26 @@ export default class UserBarbershopRepositoryMemory implements IUserBarbershopRe
       ) ?? null
     );
   }
+
+  async findActiveByBarbershop(barbershopId: string): Promise<UserBarbershop[]> {
+    return this.memberships.filter(
+      membership => membership.barbershopId === barbershopId && membership.isActive(),
+    );
+  }
+
+  async findByBarbershop(barbershopId: string): Promise<UserBarbershop[]> {
+    return this.memberships.filter(membership => membership.barbershopId === barbershopId);
+  }
+
+  async findById(id: string): Promise<UserBarbershop | null> {
+    return this.memberships.find(membership => membership.id === id) ?? null;
+  }
+
+  async delete(id: string): Promise<void> {
+    const index = this.memberships.findIndex(membership => membership.id === id);
+    if (index === -1) {
+      throw new Error('Vínculo não encontrado');
+    }
+    this.memberships.splice(index, 1);
+  }
 }
