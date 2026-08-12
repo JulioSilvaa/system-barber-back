@@ -8,6 +8,7 @@ import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository'
 export type AddBarberInputDTO = {
   userId: string;
   barbershopId: string;
+  commissionRate?: number | null;
 };
 
 export default class AddBarberToBarbershopUseCase {
@@ -49,6 +50,7 @@ export default class AddBarberToBarbershopUseCase {
       id: randomUUID(),
       userId: input.userId,
       barbershopId: input.barbershopId,
+      commissionRate: input.commissionRate ?? null,
     });
     const saved = await this.userBarbershopRepository.save(membership);
 

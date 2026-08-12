@@ -54,6 +54,12 @@ export default function createMembershipRoutes(deps?: MembershipRoutesDeps) {
     requireBarbershopSelf,
     ExpressAdapter.create(controller.updateBarberStatus),
   );
+  router.patch(
+    '/barbershops/:barbershopId/memberships/:membershipId/commission-rate',
+    requireAuth,
+    requireBarbershopSelf,
+    ExpressAdapter.create(controller.updateCommissionRate),
+  );
   router.delete(
     '/barbershops/:barbershopId/memberships/:membershipId',
     requireAuth,

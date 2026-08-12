@@ -13,6 +13,7 @@ function toEntity(row: PrismaUserBarbershop): UserBarbershop {
     barbershopId: row.barbershopId,
     status: row.status as MembershipStatus,
     localRole: row.localRole as LocalBarbershopRole,
+    commissionRate: row.commissionRate,
   });
 }
 
@@ -26,6 +27,7 @@ export default class UserBarbershopRepositoryPrisma implements IUserBarbershopRe
       barbershopId: membership.barbershopId,
       status: membership.status,
       localRole: membership.localRole,
+      commissionRate: membership.commissionRate,
     };
 
     await this.prisma.userBarbershop.upsert({

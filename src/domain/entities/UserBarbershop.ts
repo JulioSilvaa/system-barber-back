@@ -8,6 +8,7 @@ export type UserBarbershopProps = {
   barbershopId: string;
   status?: MembershipStatus;
   localRole?: LocalBarbershopRole;
+  commissionRate?: number | null;
 };
 
 export default class UserBarbershop {
@@ -16,6 +17,7 @@ export default class UserBarbershop {
   public readonly barbershopId: string;
   public status: MembershipStatus;
   public readonly localRole: LocalBarbershopRole;
+  public commissionRate: number | null;
 
   constructor(props: UserBarbershopProps) {
     this.id = props.id;
@@ -23,6 +25,7 @@ export default class UserBarbershop {
     this.barbershopId = props.barbershopId;
     this.status = props.status ?? 'ACTIVE';
     this.localRole = props.localRole ?? 'BARBER';
+    this.commissionRate = props.commissionRate ?? null;
     this.validate();
   }
 
@@ -48,6 +51,16 @@ export default class UserBarbershop {
     return this.localRole === 'BARBER';
   }
 
+  public setCommissionRate(rate: number | null): void {
+    if (rate !== null) {
+      if (!Number.isInteger(rate) || rate < 0 || rate > 100) {
+        throw new Error('Percentual de comissão deve estar entre 0 e 100');
+      }
+    }
+
+    this.commissionRate = rate;
+  }
+
   // ================= VALIDAÇÕES =================
   private validate(): void {
     if (!this.userId || this.userId.trim() === '') {
@@ -66,6 +79,15 @@ export default class UserBarbershop {
     const validRoles: LocalBarbershopRole[] = ['OWNER', 'BARBER'];
     if (!this.localRole || !validRoles.includes(this.localRole)) {
       throw new Error('Papel local inválido');
+    }
+
+    if (
+      this.commissionRate !== null &&
+      (!Number.isInteger(this.commissionRate) ||
+        this.commissionRate < 0 ||
+        this.commissionRate > 100)
+    ) {
+      throw new Error('Percentual de comissão deve estar entre 0 e 100');
     }
   }
 }

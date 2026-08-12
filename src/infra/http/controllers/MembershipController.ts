@@ -7,11 +7,13 @@ import ListBarbershopMembershipsUseCase from '@/application/useCases/membership/
 import RemoveBarberUseCase from '@/application/useCases/membership/RemoveBarber';
 import SwitchBarbershopUseCase from '@/application/useCases/membership/Switch';
 import UpdateBarberStatusUseCase from '@/application/useCases/membership/UpdateBarberStatus';
+import UpdateCommissionRateUseCase from '@/application/useCases/membership/UpdateCommissionRate';
 import { UserBarbershop } from '@/domain/entities';
 import IUserRepository from '@/domain/repository/UserRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { emitDataChanged } from '@/infra/websocket/socketServer';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
@@ -23,6 +25,7 @@ type MembershipOutputDTO = {
   barbershopId: string;
   status: string;
   localRole: string;
+  commissionRate: number | null;
 };
 
 export default class MembershipController {
@@ -31,6 +34,7 @@ export default class MembershipController {
   private readonly switchBarbershopUseCase: SwitchBarbershopUseCase;
   private readonly listBarbershopMembershipsUseCase: ListBarbershopMembershipsUseCase;
   private readonly updateBarberStatusUseCase: UpdateBarberStatusUseCase;
+  private readonly updateCommissionRateUseCase: UpdateCommissionRateUseCase;
   private readonly removeBarberUseCase: RemoveBarberUseCase;
 
   constructor(
@@ -57,6 +61,10 @@ export default class MembershipController {
       userBarbershopRepository,
       auditService,
     );
+    this.updateCommissionRateUseCase = new UpdateCommissionRateUseCase(
+      userBarbershopRepository,
+      auditService,
+    );
     this.removeBarberUseCase = new RemoveBarberUseCase(userBarbershopRepository, auditService);
   }
 
@@ -75,10 +83,12 @@ export default class MembershipController {
         {
           userId: req.body.userId,
           barbershopId: req.body.barbershopId,
+          commissionRate: req.body.commissionRate,
         },
         buildAuditContext(req),
       );
 
+      emitDataChanged(membership.barbershopId);
       return res.status(201).json(toMembershipOutput(membership));
     } catch (error) {
       next(error);
@@ -130,6 +140,32 @@ export default class MembershipController {
         buildAuditContext(req),
       );
 
+      emitDataChanged(barbershopId);
+      return res.status(200).json(toMembershipOutput(membership));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateCommissionRate = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const barbershopId = Array.isArray(req.params.barbershopId)
+        ? req.params.barbershopId[0]
+        : req.params.barbershopId;
+      const membershipId = Array.isArray(req.params.membershipId)
+        ? req.params.membershipId[0]
+        : req.params.membershipId;
+
+      const membership = await this.updateCommissionRateUseCase.execute(
+        {
+          barbershopId,
+          membershipId,
+          commissionRate: req.body.commissionRate,
+        },
+        buildAuditContext(req),
+      );
+
+      emitDataChanged(barbershopId);
       return res.status(200).json(toMembershipOutput(membership));
     } catch (error) {
       next(error);
@@ -150,6 +186,7 @@ export default class MembershipController {
         buildAuditContext(req),
       );
 
+      emitDataChanged(barbershopId);
       return res.status(200).json({ message: 'Barbeiro removido com sucesso' });
     } catch (error) {
       next(error);
@@ -164,5 +201,6 @@ function toMembershipOutput(membership: UserBarbershop): MembershipOutputDTO {
     barbershopId: membership.barbershopId,
     status: membership.status,
     localRole: membership.localRole,
+    commissionRate: membership.commissionRate,
   };
 }
