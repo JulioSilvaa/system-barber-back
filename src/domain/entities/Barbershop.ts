@@ -16,6 +16,8 @@ export class Barbershop {
   public readonly slug: string;
   public readonly email: string;
   public readonly phone: string;
+  public readonly primaryColor?: string;
+  public readonly logoUrl?: string;
   public readonly isActive: boolean;
   public readonly password: string;
 
@@ -30,6 +32,8 @@ export class Barbershop {
     this.slug = props.slug;
     this.email = props.email.trim().toLowerCase();
     this.phone = props.phone;
+    this.primaryColor = props.primaryColor;
+    this.logoUrl = props.logoUrl;
     this.isActive = props.isActive ?? true;
     this.password = props.password;
   }

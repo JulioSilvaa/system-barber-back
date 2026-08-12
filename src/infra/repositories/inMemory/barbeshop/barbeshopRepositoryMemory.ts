@@ -46,7 +46,36 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
       email: current.email,
       phone: current.phone,
       password: current.password,
+      primaryColor: current.primaryColor,
+      logoUrl: current.logoUrl,
       isActive,
+    });
+
+    this.barbershops[index] = updated;
+    return updated;
+  }
+
+  async update(
+    id: string,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+  ): Promise<Barbershop | null> {
+    const index = this.barbershops.findIndex(barbershop => barbershop.id === id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    const current = this.barbershops[index];
+    const updated = new Barbershop({
+      id: current.id,
+      name: data.name ?? current.name,
+      slug: current.slug,
+      email: current.email,
+      phone: current.phone,
+      password: current.password,
+      primaryColor: data.primaryColor ?? current.primaryColor,
+      logoUrl: data.logoUrl ?? current.logoUrl,
+      isActive: current.isActive,
     });
 
     this.barbershops[index] = updated;

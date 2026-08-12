@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
 import BarbershopController from '../controllers/BarbershopController';
+import { uploadLogo } from '@/infra/http/helpers/logoUpload';
 import {
   requireAuth,
   requireBarbershopSelf,
@@ -50,7 +51,16 @@ export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDe
 
   router.post('/barbershops/login', ExpressAdapter.create(controller.login));
   router.post('/barbershops', ExpressAdapter.create(controller.create));
+  router.get('/barbershops/me', requireAuth, ExpressAdapter.create(controller.me));
+  router.post('/barbershops/logout', ExpressAdapter.create(controller.logout));
   router.get('/barbershops', ExpressAdapter.create(controller.list));
+  router.get(
+    '/barbershops/:identifier',
+    resolveBarbershop(barbershopRepository),
+    ExpressAdapter.create(controller.getPublic),
+  );
+  router.get('/barbershops/me', requireAuth, ExpressAdapter.create(controller.me));
+  router.post('/barbershops/logout', ExpressAdapter.create(controller.logout));
   router.patch(
     '/barbershops/:id/status',
     requireAuth,
@@ -68,6 +78,20 @@ export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDe
     requireAuth,
     requireBarbershopSelf,
     ExpressAdapter.create(controller.listStaff),
+  );
+
+  router.patch(
+    '/barbershops/:id/branding',
+    requireAuth,
+    requireBarbershopSelf,
+    ExpressAdapter.create(controller.updateBranding),
+  );
+  router.post(
+    '/barbershops/:id/branding/logo',
+    requireAuth,
+    requireBarbershopSelf,
+    uploadLogo.single('logo'),
+    ExpressAdapter.create(controller.uploadLogo),
   );
 
   return router;

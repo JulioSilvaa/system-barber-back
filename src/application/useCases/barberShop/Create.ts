@@ -1,4 +1,5 @@
 import AuditService, { AuditContext } from '@/application/services/AuditService';
+import { generateUniqueSlug } from '@/application/services/SlugService';
 import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import HashRepository from '@/domain/repository/HashRepository';
@@ -7,7 +8,6 @@ import BcryptHashService from '@/infra/helpers/BcryptHash';
 
 export type CreateBarberShopInputDTO = {
   name: string;
-  slug: string;
   email: string;
   phone: string;
   password: string;
@@ -33,10 +33,9 @@ export default class CreateBarberShopUseCase {
     this.validateInput(input);
     this.validatePasswordStrength(input.password);
 
-    const existingBarbershop = await this._barbershopRepository.findBySlug(input.slug);
-    if (existingBarbershop) {
-      throw new Error('Slug já em uso');
-    }
+    const slug = await generateUniqueSlug(input.name, candidate =>
+      this._barbershopRepository.findBySlug(candidate).then(found => found !== null),
+    );
 
     const existingByEmail = await this._barbershopRepository.findByEmail(input.email);
     if (existingByEmail) {
@@ -47,7 +46,7 @@ export default class CreateBarberShopUseCase {
     const barbershop = new Barbershop({
       id: this._idGenerator.generate(),
       name: input.name,
-      slug: input.slug,
+      slug,
       email: input.email,
       phone: input.phone,
       password: hashedPassword,

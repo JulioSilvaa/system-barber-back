@@ -7,4 +7,8 @@ export interface IBarbershopRepository {
   findAll(): Promise<Barbershop[]>;
   save(barbershop: Barbershop): Promise<Barbershop>;
   setActive(id: string, isActive: boolean): Promise<Barbershop | null>;
+  update(
+    id: string,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+  ): Promise<Barbershop | null>;
 }

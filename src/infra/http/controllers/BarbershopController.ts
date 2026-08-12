@@ -6,6 +6,7 @@ import ListBarbershopsUseCase from '@/application/useCases/barberShop/List';
 import ListBarbersUseCase from '@/application/useCases/barberShop/ListBarbers';
 import ListBarbershopStaffUseCase from '@/application/useCases/barberShop/ListBarbershopStaff';
 import UpdateBarbershopStatusUseCase from '@/application/useCases/barberShop/UpdateBarbershopStatus';
+import UpdateBrandingUseCase from '@/application/useCases/barberShop/UpdateBranding';
 import AuthenticateBarbershopUseCase from '@/application/useCases/auth/AuthenticateBarbershop';
 import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
@@ -14,6 +15,8 @@ import { ITokenService } from '@/domain/repository/TokenService';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import IUserRepository from '@/domain/repository/UserRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { emitDataChanged } from '@/infra/websocket/socketServer';
+import { setAuthCookies, clearAuthCookies } from '@/infra/http/helpers/authCookie';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import CryptoUuidGenerator from '@/infra/helpers/IdGenerator';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
@@ -28,15 +31,20 @@ type BarbershopOutputDTO = {
   slug: string;
   email: string;
   phone: string;
+  primaryColor?: string;
+  logoUrl?: string;
   isActive: boolean;
 };
 
 export default class BarbershopController {
+  private readonly barbershopRepository: IBarbershopRepository;
   private readonly createBarbershopUseCase: CreateBarberShopUseCase;
   private readonly listBarbershopsUseCase: ListBarbershopsUseCase;
   private readonly listBarbersUseCase: ListBarbersUseCase;
   private readonly listBarbershopStaffUseCase: ListBarbershopStaffUseCase;
   private readonly updateBarbershopStatusUseCase: UpdateBarbershopStatusUseCase;
+  private readonly updateBrandingUseCase: UpdateBrandingUseCase;
+  private readonly authenticateBarbershopUseCase: AuthenticateBarbershopUseCase;
 
   constructor(
     barbershopRepository: IBarbershopRepository = new BarbershopRepositoryMemory(),
@@ -46,6 +54,7 @@ export default class BarbershopController {
     userRepository: IUserRepository = new UserRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
   ) {
+    this.barbershopRepository = barbershopRepository;
     this.createBarbershopUseCase = new CreateBarberShopUseCase(
       barbershopRepository,
       new CryptoUuidGenerator(),
@@ -67,6 +76,7 @@ export default class BarbershopController {
       barbershopRepository,
       auditService,
     );
+    this.updateBrandingUseCase = new UpdateBrandingUseCase(barbershopRepository, auditService);
   }
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -74,7 +84,6 @@ export default class BarbershopController {
       const output = await this.createBarbershopUseCase.execute(
         {
           name: req.body.name,
-          slug: req.body.slug,
           email: req.body.email,
           phone: req.body.phone,
           password: req.body.password,
@@ -97,12 +106,31 @@ export default class BarbershopController {
     }
   };
 
+  getPublic = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.barbershopId) {
+        return res.status(404).json({ message: 'Barbearia não encontrada' });
+      }
+
+      const barbershop = await this.barbershopRepository.findById(req.barbershopId);
+      if (!barbershop || !barbershop.isActive) {
+        return res.status(404).json({ message: 'Barbearia não encontrada' });
+      }
+
+      return res.status(200).json(toBarbershopOutput(barbershop));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const output = await this.authenticateBarbershopUseCase.execute({
         email: req.body.email,
         password: req.body.password,
       });
+
+      setAuthCookies(res, output.accessToken, output.refreshToken);
 
       return res.status(200).json(output);
     } catch (error) {
@@ -136,6 +164,29 @@ export default class BarbershopController {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  logout = async (_req: Request, res: Response, _next: NextFunction) => {
+    clearAuthCookies(res);
+    return res.status(204).send();
+  };
+
+  me = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.actor !== 'BARBERSHOP' || !req.userId) {
+        return res.status(403).json({ message: 'Acesso negado' });
+      }
+
+      const barbershop = await this.barbershopRepository.findById(req.userId);
+      if (!barbershop) {
+        return res.status(404).json({ message: 'Barbearia não encontrada' });
+      }
+
+      return res.status(200).json(toBarbershopOutput(barbershop));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   listStaff = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const rawId = req.params.barbershopId;
@@ -162,6 +213,60 @@ export default class BarbershopController {
       next(error);
     }
   };
+
+  updateBranding = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const barbershopId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const { name, primaryColor, logoUrl } = req.body ?? {};
+
+      if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
+        throw new Error('name must be a non-empty string');
+      }
+      if (primaryColor !== undefined && typeof primaryColor !== 'string') {
+        throw new Error('primaryColor must be a string');
+      }
+      if (logoUrl !== undefined && typeof logoUrl !== 'string') {
+        throw new Error('logoUrl must be a string');
+      }
+
+      const barbershop = await this.updateBrandingUseCase.execute(
+        {
+          barbershopId,
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...(primaryColor !== undefined ? { primaryColor } : {}),
+          ...(logoUrl !== undefined ? { logoUrl } : {}),
+        },
+        buildAuditContext(req),
+      );
+
+      emitDataChanged(barbershopId);
+      return res.status(200).json(toBarbershopOutput(barbershop));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  uploadLogo = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        throw new Error('logo file is required');
+      }
+
+      const barbershopId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const version = Date.now();
+      const logoUrl = `/uploads/${req.file.filename}?v=${version}`;
+
+      const barbershop = await this.updateBrandingUseCase.execute(
+        { barbershopId, logoUrl },
+        buildAuditContext(req),
+      );
+
+      emitDataChanged(barbershopId);
+      return res.status(200).json({ logoUrl: barbershop.logoUrl });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 function toBarbershopOutput(barbershop: Barbershop): BarbershopOutputDTO {
@@ -171,6 +276,8 @@ function toBarbershopOutput(barbershop: Barbershop): BarbershopOutputDTO {
     slug: barbershop.slug,
     email: barbershop.email,
     phone: barbershop.phone,
+    primaryColor: barbershop.primaryColor,
+    logoUrl: barbershop.logoUrl,
     isActive: barbershop.isActive,
   };
 }

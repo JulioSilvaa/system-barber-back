@@ -10,6 +10,8 @@ function toEntity(row: PrismaBarbershop): Barbershop {
     email: row.email,
     phone: row.phone,
     password: row.password,
+    primaryColor: row.primaryColor ?? undefined,
+    logoUrl: row.logoUrl ?? undefined,
     isActive: row.isActive,
   });
 }
@@ -23,6 +25,9 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
   }
 
   async findBySlug(slug: string): Promise<Barbershop | null> {
+    if (!slug || slug.trim() === '') {
+      return null;
+    }
     const row = await this.prisma.barbershop.findUnique({ where: { slug } });
     return row ? toEntity(row) : null;
   }
@@ -47,6 +52,8 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
       email: barbershop.email,
       phone: barbershop.phone,
       password: barbershop.password,
+      primaryColor: barbershop.primaryColor ?? null,
+      logoUrl: barbershop.logoUrl ?? null,
       isActive: barbershop.isActive,
     };
 
@@ -63,6 +70,27 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
     const result = await this.prisma.barbershop.updateMany({
       where: { id },
       data: { isActive },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    const row = await this.prisma.barbershop.findUnique({ where: { id } });
+    return row ? toEntity(row) : null;
+  }
+
+  async update(
+    id: string,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+  ): Promise<Barbershop | null> {
+    const result = await this.prisma.barbershop.updateMany({
+      where: { id },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.primaryColor !== undefined ? { primaryColor: data.primaryColor } : {}),
+        ...(data.logoUrl !== undefined ? { logoUrl: data.logoUrl } : {}),
+      },
     });
 
     if (result.count === 0) {
