@@ -13,6 +13,8 @@ function toEntity(row: PrismaAppointment): Appointment {
     startDate: row.startDate,
     endDate: row.endDate,
     status: row.status as AppointmentStatus,
+    pricePaidCents: row.pricePaidCents,
+    paymentMethod: row.paymentMethod as Appointment['paymentMethod'],
   });
 }
 
@@ -65,6 +67,14 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
     return rows.map(toEntity);
   }
 
+  async findAllByBarbershop(barbershopId: string): Promise<Appointment[]> {
+    const rows = await this.prisma.appointment.findMany({
+      where: { barbershopId },
+      orderBy: { startDate: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
   async save(appointment: Appointment): Promise<Appointment> {
     const data = {
       id: appointment.id,
@@ -75,6 +85,8 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
       startDate: appointment.startDate,
       endDate: appointment.endDate,
       status: appointment.status,
+      pricePaidCents: appointment.pricePaidCents,
+      paymentMethod: appointment.paymentMethod,
     };
 
     await this.prisma.appointment.upsert({

@@ -1,5 +1,7 @@
 export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
+export type AppointmentPaymentMethod = 'PIX' | 'CARD' | 'CASH';
+
 export type AppointmentProps = {
   id: string;
   barbershopId: string;
@@ -9,6 +11,8 @@ export type AppointmentProps = {
   startDate: Date;
   endDate: Date;
   status?: AppointmentStatus;
+  pricePaidCents?: number | null;
+  paymentMethod?: AppointmentPaymentMethod | null;
 };
 
 export class Appointment {
@@ -20,6 +24,8 @@ export class Appointment {
   public readonly startDate: Date;
   public readonly endDate: Date;
   public status: AppointmentStatus;
+  public pricePaidCents: number | null;
+  public paymentMethod: AppointmentPaymentMethod | null;
 
   constructor(props: AppointmentProps) {
     if (props.endDate <= props.startDate) {
@@ -34,17 +40,36 @@ export class Appointment {
     this.startDate = props.startDate;
     this.endDate = props.endDate;
     this.status = props.status ?? 'SCHEDULED';
+    this.pricePaidCents = props.pricePaidCents ?? null;
+    this.paymentMethod = props.paymentMethod ?? null;
   }
 
   public isOverlappingWith(other: Appointment): boolean {
     return this.startDate < other.endDate && this.endDate > other.startDate;
   }
 
-  public complete(): void {
+  public complete(payment: {
+    pricePaidCents: number;
+    paymentMethod: AppointmentPaymentMethod;
+  }): void {
     if (this.status === 'CANCELLED') {
       throw new Error('appointment canceled');
     }
 
+    if (this.status === 'COMPLETED') {
+      throw new Error('appointment already completed');
+    }
+
+    if (!Number.isInteger(payment.pricePaidCents) || payment.pricePaidCents <= 0) {
+      throw new Error('Valor da cobrança é obrigatório');
+    }
+
+    if (!['PIX', 'CARD', 'CASH'].includes(payment.paymentMethod)) {
+      throw new Error('Forma de pagamento inválida');
+    }
+
+    this.pricePaidCents = payment.pricePaidCents;
+    this.paymentMethod = payment.paymentMethod;
     this.status = 'COMPLETED';
   }
 

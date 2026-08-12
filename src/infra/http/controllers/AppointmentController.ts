@@ -6,30 +6,41 @@ import CompleteAppointmentUseCase from '@/application/useCases/appointment/Compl
 import CancelAppointmentUseCase from '@/application/useCases/appointment/Cancel';
 import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListDay';
 import { Appointment } from '@/domain/entities/Appointment';
+import { Service } from '@/domain/entities/Service';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import ICashRegisterRepository from '@/domain/repository/CashRegisterRepository';
+import ICommissionRepository from '@/domain/repository/CommissionRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { emitToBarbershop, emitDataChanged } from '@/infra/websocket/socketServer';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
+import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
+import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 
 type AppointmentOutputDTO = {
   id: string;
   barbershopId: string;
   barberId: string;
   serviceId: string;
+  serviceName?: string;
+  priceCents?: number;
+  durationMinutes?: number;
   customerId: string;
   customerName: string;
   customerPhone: string;
   startDate: Date;
   endDate: Date;
   status: string;
+  pricePaidCents?: number | null;
+  paymentMethod?: string | null;
 };
 
 export default class AppointmentController {
@@ -38,6 +49,7 @@ export default class AppointmentController {
   private readonly cancelAppointmentUseCase: CancelAppointmentUseCase;
   private readonly listDayAppointmentsUseCase: ListDayAppointmentsUseCase;
   private readonly customerRepository: ICustomerRepository;
+  private readonly serviceRepository: IServiceRepository;
 
   constructor(
     appointmentRepository: IAppointmentRepository = new AppointmentRepositoryMemory(),
@@ -46,6 +58,8 @@ export default class AppointmentController {
     userBarbershopRepository: IUserBarbershopRepository = new UserBarbershopRepositoryMemory(),
     customerRepository: ICustomerRepository = new CustomerRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
+    cashRegisterRepository: ICashRegisterRepository = new CashRegisterRepositoryMemory(),
+    commissionRepository: ICommissionRepository = new CommissionRepositoryMemory(),
   ) {
     this.createAppointmentUseCase = new CreateAppointmentUseCase(
       appointmentRepository,
@@ -57,6 +71,10 @@ export default class AppointmentController {
     );
     this.completeAppointmentUseCase = new CompleteAppointmentUseCase(
       appointmentRepository,
+      serviceRepository,
+      userBarbershopRepository,
+      cashRegisterRepository,
+      commissionRepository,
       auditService,
     );
     this.cancelAppointmentUseCase = new CancelAppointmentUseCase(
@@ -65,6 +83,7 @@ export default class AppointmentController {
     );
     this.listDayAppointmentsUseCase = new ListDayAppointmentsUseCase(appointmentRepository);
     this.customerRepository = customerRepository;
+    this.serviceRepository = serviceRepository;
   }
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -86,6 +105,9 @@ export default class AppointmentController {
       );
 
       const enriched = await this.enrich([output]);
+
+      emitToBarbershop(output.barbershopId, 'appointment:created', enriched[0]);
+
       return res.status(201).json(enriched[0]);
     } catch (error) {
       next(error);
@@ -94,13 +116,37 @@ export default class AppointmentController {
 
   listDay = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const date = parseDateQuery(req.query.date);
+      const date = req.query.date === undefined ? null : parseDateQuery(req.query.date);
       const rawBarbershopId = req.params.barbershopId;
       const barbershopId =
         req.barbershopId ?? (Array.isArray(rawBarbershopId) ? rawBarbershopId[0] : rawBarbershopId);
       const appointments = await this.listDayAppointmentsUseCase.execute(barbershopId, date);
 
       return res.status(200).json(await this.enrich(appointments));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  listBusy = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const date = parseDateQuery(req.query.date);
+      const rawBarbershopId = req.params.identifier ?? req.params.barbershopId;
+      const barbershopId =
+        req.barbershopId ?? (Array.isArray(rawBarbershopId) ? rawBarbershopId[0] : rawBarbershopId);
+      const appointments = await this.listDayAppointmentsUseCase.execute(barbershopId, date);
+
+      const busy = appointments
+        .filter(appointment => appointment.status !== 'CANCELLED')
+        .map(appointment => ({
+          id: appointment.id,
+          barberId: appointment.barberId,
+          startDate: appointment.startDate,
+          endDate: appointment.endDate,
+          status: appointment.status,
+        }));
+
+      return res.status(200).json(busy);
     } catch (error) {
       next(error);
     }
@@ -113,14 +159,20 @@ export default class AppointmentController {
       const appointmentId = Array.isArray(rawId) ? rawId[0] : rawId;
       const barbershopId =
         req.barbershopId ?? (Array.isArray(rawBarbershopId) ? rawBarbershopId[0] : rawBarbershopId);
+      const body = req.body ?? {};
 
       const output = await this.completeAppointmentUseCase.execute(
-        appointmentId,
-        barbershopId,
+        {
+          appointmentId,
+          barbershopId,
+          paidPriceCents: body.paidPriceCents,
+          paymentMethod: body.paymentMethod,
+        },
         buildAuditContext(req),
       );
 
       const enriched = await this.enrich([output]);
+      emitDataChanged(barbershopId);
       return res.status(200).json(enriched[0]);
     } catch (error) {
       next(error);
@@ -142,6 +194,7 @@ export default class AppointmentController {
       );
 
       const enriched = await this.enrich([output]);
+      emitDataChanged(barbershopId);
       return res.status(200).json(enriched[0]);
     } catch (error) {
       next(error);
@@ -153,20 +206,36 @@ export default class AppointmentController {
     const customers = await this.customerRepository.findByIds(customerIds);
     const customerById = new Map(customers.map(customer => [customer.id, customer]));
 
+    const serviceById = new Map<string, Service>();
+    for (const appointment of appointments) {
+      if (serviceById.has(appointment.serviceId)) continue;
+      const service = await this.serviceRepository.findById(
+        appointment.serviceId,
+        appointment.barbershopId,
+      );
+      if (service) serviceById.set(appointment.serviceId, service);
+    }
+
     return appointments.map(appointment => {
       const customer = customerById.get(appointment.customerId);
+      const service = serviceById.get(appointment.serviceId);
 
       return {
         id: appointment.id,
         barbershopId: appointment.barbershopId,
         barberId: appointment.barberId,
         serviceId: appointment.serviceId,
+        serviceName: service?.name,
+        priceCents: service?.priceCents,
+        durationMinutes: service?.durationMinutes,
         customerId: appointment.customerId,
         customerName: customer?.name ?? 'Cliente não encontrado',
         customerPhone: customer?.phone ?? '',
         startDate: appointment.startDate,
         endDate: appointment.endDate,
         status: appointment.status,
+        pricePaidCents: appointment.pricePaidCents ?? null,
+        paymentMethod: appointment.paymentMethod ?? null,
       };
     });
   }
