@@ -49,4 +49,18 @@ export default class ServiceRepositoryPrisma implements IServiceRepository {
 
     return service;
   }
+
+  async update(service: Service): Promise<Service> {
+    await this.prisma.service.update({
+      where: { id: service.id },
+      data: {
+        name: service.name,
+        priceCents: service.priceCents,
+        durationMinutes: service.durationMinutes,
+        isActive: service.isActive,
+      },
+    });
+
+    return service;
+  }
 }

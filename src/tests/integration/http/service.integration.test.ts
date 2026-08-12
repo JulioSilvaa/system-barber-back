@@ -162,4 +162,83 @@ describe('Service HTTP Integration', () => {
       );
     });
   });
+
+  describe('PATCH /api/barbershops/:barbershopId/services/:serviceId', () => {
+    it('deve atualizar nome, preço e duração do serviço', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+
+      const created = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/services`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send(servicePayload());
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/services/${created.body.id}`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ name: 'Corte + Barba', priceCents: 6500, durationMinutes: 45 });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: created.body.id,
+          name: 'Corte + Barba',
+          priceCents: 6500,
+          durationMinutes: 45,
+          isActive: true,
+        }),
+      );
+    });
+
+    it('deve retornar 400 quando o serviço não pertence à barbearia', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/services/servico-inexistente`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ name: 'Qualquer' });
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('PATCH /api/barbershops/:barbershopId/services/:serviceId/status', () => {
+    it('deve desativar e reativar um serviço', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+
+      const created = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/services`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send(servicePayload());
+
+      const deactivated = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/services/${created.body.id}/status`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ isActive: false });
+
+      expect(deactivated.status).toBe(200);
+      expect(deactivated.body).toEqual(expect.objectContaining({ isActive: false }));
+
+      const reactivated = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/services/${created.body.id}/status`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ isActive: true });
+
+      expect(reactivated.status).toBe(200);
+      expect(reactivated.body).toEqual(expect.objectContaining({ isActive: true }));
+    });
+
+    it('deve retornar 401 sem token', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/services/qualquer/status`)
+        .send({ isActive: false });
+
+      expect(response.status).toBe(401);
+    });
+  });
 });

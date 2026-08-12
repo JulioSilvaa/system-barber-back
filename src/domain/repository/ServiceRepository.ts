@@ -4,4 +4,5 @@ export interface IServiceRepository {
   findById(id: string, barbershopId: string): Promise<Service | null>;
   findAll(barbershopId: string): Promise<Service[]>;
   save(service: Service): Promise<Service>;
+  update(service: Service): Promise<Service>;
 }

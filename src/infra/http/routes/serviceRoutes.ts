@@ -44,6 +44,18 @@ export default function createServiceRoutes(deps?: ServiceRoutesDeps) {
     resolveBarbershop(barbershopRepository),
     ExpressAdapter.create(controller.list),
   );
+  router.patch(
+    '/barbershops/:barbershopId/services/:serviceId',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.update),
+  );
+  router.patch(
+    '/barbershops/:barbershopId/services/:serviceId/status',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.setActive),
+  );
 
   return router;
 }

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import CreateServiceUseCase from '@/application/useCases/service/Create';
 import ListServicesUseCase from '@/application/useCases/service/List';
+import UpdateServiceUseCase from '@/application/useCases/service/Update';
+import SetServiceActiveUseCase from '@/application/useCases/service/SetActive';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import { Barbershop } from '@/domain/entities/Barbershop';
@@ -99,6 +101,80 @@ describe('Service Use Cases Unit Tests', () => {
 
       expect(services).toHaveLength(2);
       expect(services.map(service => service.name)).toEqual(['Corte de cabelo', 'Barba']);
+    });
+  });
+
+  describe('UpdateServiceUseCase', () => {
+    it('deve atualizar nome, preço e duração do serviço', async () => {
+      const createUseCase = new CreateServiceUseCase(serviceRepository, barbershopRepository);
+      const updateUseCase = new UpdateServiceUseCase(serviceRepository);
+
+      const created = await createUseCase.execute(inputMock);
+
+      const updated = await updateUseCase.execute({
+        serviceId: created.id,
+        barbershopId: BARBERSHOP_ID,
+        name: 'Corte + Barba',
+        priceCents: 6500,
+        durationMinutes: 45,
+      });
+
+      expect(updated).toEqual(
+        expect.objectContaining({
+          id: created.id,
+          name: 'Corte + Barba',
+          priceCents: 6500,
+          durationMinutes: 45,
+        }),
+      );
+    });
+
+    it('deve lançar erro quando o serviço não existe na barbearia', async () => {
+      const updateUseCase = new UpdateServiceUseCase(serviceRepository);
+
+      await expect(
+        updateUseCase.execute({
+          serviceId: 'servico-inexistente',
+          barbershopId: BARBERSHOP_ID,
+          name: 'Qualquer',
+        }),
+      ).rejects.toThrow('Serviço não encontrado');
+    });
+  });
+
+  describe('SetServiceActiveUseCase', () => {
+    it('deve desativar e reativar um serviço', async () => {
+      const createUseCase = new CreateServiceUseCase(serviceRepository, barbershopRepository);
+      const setActiveUseCase = new SetServiceActiveUseCase(serviceRepository);
+
+      const created = await createUseCase.execute(inputMock);
+      expect(created.isActive).toBe(true);
+
+      const deactivated = await setActiveUseCase.execute({
+        serviceId: created.id,
+        barbershopId: BARBERSHOP_ID,
+        isActive: false,
+      });
+      expect(deactivated.isActive).toBe(false);
+
+      const reactivated = await setActiveUseCase.execute({
+        serviceId: created.id,
+        barbershopId: BARBERSHOP_ID,
+        isActive: true,
+      });
+      expect(reactivated.isActive).toBe(true);
+    });
+
+    it('deve lançar erro quando o serviço não existe', async () => {
+      const setActiveUseCase = new SetServiceActiveUseCase(serviceRepository);
+
+      await expect(
+        setActiveUseCase.execute({
+          serviceId: 'servico-inexistente',
+          barbershopId: BARBERSHOP_ID,
+          isActive: false,
+        }),
+      ).rejects.toThrow('Serviço não encontrado');
     });
   });
 });

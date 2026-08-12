@@ -26,4 +26,16 @@ export default class ServiceRepositoryMemory implements IServiceRepository {
 
     return service;
   }
+
+  async update(service: Service): Promise<Service> {
+    const existingIndex = this.services.findIndex(item => item.id === service.id);
+
+    if (existingIndex === -1) {
+      throw new Error('Serviço não encontrado');
+    }
+
+    this.services[existingIndex] = service;
+
+    return service;
+  }
 }
