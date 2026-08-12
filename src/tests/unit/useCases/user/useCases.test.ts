@@ -4,7 +4,6 @@ import DeleteUserUseCase from '@/application/useCases/user/Delete';
 import FindUserByIdUseCase from '@/application/useCases/user/Find';
 import ListUserUseCase from '@/application/useCases/user/List';
 import { CreateUserInputDTO } from '@/application/dtos/UserDto';
-import HashRepository from '@/domain/repository/HashRepository';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 
@@ -13,7 +12,6 @@ describe('User Use Cases Unit Tests', () => {
   const NON_EXISTENT_ID = 'f47ac10b-0000-0000-0000-000000000000';
 
   let userRepository: UserRepositoryMemory;
-  let mockHashRepository: HashRepository;
   let mockIdGenerator: IdGeneratorRepository;
 
   let createUseCase: CreateUserUseCase;
@@ -25,22 +23,16 @@ describe('User Use Cases Unit Tests', () => {
     name: 'John Doe',
     email: 'john@example.com',
     phone: '11999999999',
-    password: 'Password123',
   };
 
   beforeEach(() => {
     userRepository = new UserRepositoryMemory();
 
-    mockHashRepository = {
-      hash: vi.fn().mockResolvedValue('HashedPassword123'),
-      compare: vi.fn().mockResolvedValue(true),
-    };
-
     mockIdGenerator = {
       generate: vi.fn().mockReturnValue(VALID_USER_ID),
     };
 
-    createUseCase = new CreateUserUseCase(userRepository, mockHashRepository, mockIdGenerator);
+    createUseCase = new CreateUserUseCase(userRepository, mockIdGenerator);
     deleteUseCase = new DeleteUserUseCase(userRepository);
     findByIdUseCase = new FindUserByIdUseCase(userRepository);
     listUserUseCase = new ListUserUseCase(userRepository);
@@ -61,10 +53,9 @@ describe('User Use Cases Unit Tests', () => {
       });
       expect(output).not.toHaveProperty('barbershopId');
       expect(output).not.toHaveProperty('role');
-      expect(mockHashRepository.hash).toHaveBeenCalledWith(inputMock.password);
+      expect(output).not.toHaveProperty('password');
       expect(mockIdGenerator.generate).toHaveBeenCalled();
       expect(savedUser).toBeTruthy();
-      expect(savedUser?.password).toBe('HashedPassword123');
     });
 
     it('deve impedir cadastro com email duplicado', async () => {
@@ -183,10 +174,10 @@ describe('User Use Cases Unit Tests', () => {
       );
     });
 
-    it('deve lançar erro quando o telefone não for informado', async () => {
+    it('deve aceitar telefone vazio (opcional)', async () => {
       const input = { ...inputMock, phone: '' };
 
-      await expect(createUseCase.execute(input)).rejects.toThrow('Telefone é obrigatório');
+      await expect(createUseCase.execute(input)).resolves.toBeDefined();
     });
 
     it('deve lançar erro quando o telefone tiver menos de 10 dígitos', async () => {
@@ -225,53 +216,6 @@ describe('User Use Cases Unit Tests', () => {
       await expect(createUseCase.execute(input)).rejects.toThrow(
         'Celulares devem começar com 9 após o DDD',
       );
-    });
-
-    it('deve lançar erro quando a senha não for informada', async () => {
-      const input = { ...inputMock, password: undefined } as unknown as CreateUserInputDTO;
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Senha deve ter entre 8 e 72 caracteres',
-      );
-    });
-
-    it('deve rejeitar senha fraca informada pelo usuário', async () => {
-      const input = { ...inputMock, password: '123' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Senha deve ter entre 8 e 72 caracteres',
-      );
-    });
-
-    it('deve rejeitar senha sem letra maiúscula', async () => {
-      const input = { ...inputMock, password: 'password123' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
-    });
-
-    it('deve rejeitar senha sem letra minúscula', async () => {
-      const input = { ...inputMock, password: 'PASSWORD123' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
-    });
-
-    it('deve rejeitar senha sem número', async () => {
-      const input = { ...inputMock, password: 'PasswordSemNumero' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
-    });
-
-    it('não deve chamar o hash quando a senha for inválida', async () => {
-      const input = { ...inputMock, password: '123' };
-
-      await expect(createUseCase.execute(input)).rejects.toThrow();
-      expect(mockHashRepository.hash).not.toHaveBeenCalled();
     });
   });
 });

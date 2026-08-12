@@ -88,7 +88,6 @@ describe('Customer VIP HTTP Integration', () => {
           name: 'Barbeiro João',
           email: 'barbeiro@example.com',
           phone: '11988888888',
-          password: 'Password123',
           barbershopId,
         });
 

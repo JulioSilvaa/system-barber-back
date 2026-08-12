@@ -20,23 +20,16 @@ describe('Database Integration (PostgreSQL)', () => {
   let prisma: PrismaClient;
   let repositories: RepositorySet;
 
-  const adminProps = {
+  const userProps = {
     name: 'Admin DB',
     email: 'admin-db@example.com',
     phone: '11999999999',
-    password: 'SenhaForte123',
   };
 
   const hashService = new BcryptHashService();
 
-  async function makeUser(props: {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    password: string;
-  }) {
-    return new User({ ...props, password: await hashService.hash(props.password) });
+  async function makeUser(props: { id: string; name: string; email: string; phone?: string }) {
+    return new User(props);
   }
 
   async function makeBarbershop(props: {
@@ -70,7 +63,7 @@ describe('Database Integration (PostgreSQL)', () => {
 
   describe('UserRepository', () => {
     it('deve salvar e buscar um usuário por id e email (case-insensitive)', async () => {
-      const user = await makeUser({ id: 'u-1', ...adminProps });
+      const user = await makeUser({ id: 'u-1', ...userProps });
 
       await repositories.userRepository.save(user);
 
@@ -83,7 +76,7 @@ describe('Database Integration (PostgreSQL)', () => {
     });
 
     it('deve listar usuários e apagar um usuário', async () => {
-      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...userProps }));
 
       const list = await repositories.userRepository.list();
       expect(list).toHaveLength(1);
@@ -93,14 +86,13 @@ describe('Database Integration (PostgreSQL)', () => {
     });
 
     it('deve atualizar um usuário existente (upsert)', async () => {
-      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...userProps }));
 
       const updated = await makeUser({
         id: 'u-1',
         name: 'Admin Renomeado',
         email: 'admin-db@example.com',
         phone: '11999999999',
-        password: 'SenhaForte123',
       });
       await repositories.userRepository.save(updated);
 
@@ -132,7 +124,7 @@ describe('Database Integration (PostgreSQL)', () => {
 
   describe('UserBarbershopRepository', () => {
     it('deve salvar um vínculo e listar os vínculos de um usuário', async () => {
-      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...userProps }));
       await repositories.barbershopRepository.save(
         await makeBarbershop({
           id: 'b-1',
@@ -200,7 +192,7 @@ describe('Database Integration (PostgreSQL)', () => {
 
   describe('AppointmentRepository', () => {
     it('deve salvar um agendamento e filtrar por barbeiro e dia', async () => {
-      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...adminProps }));
+      await repositories.userRepository.save(await makeUser({ id: 'u-1', ...userProps }));
       await repositories.barbershopRepository.save(
         await makeBarbershop({
           id: 'b-1',
@@ -273,6 +265,72 @@ describe('Database Integration (PostgreSQL)', () => {
 
       expect(barbershopSameDay).toHaveLength(1);
       expect(barbershopOtherDay).toHaveLength(0);
+
+      await repositories.appointmentRepository.save(
+        new Appointment({
+          id: 'a-2',
+          barbershopId: 'b-1',
+          barberId: 'u-1',
+          serviceId: 's-1',
+          customerId: 'c-1',
+          startDate: new Date('2026-08-11T09:00:00.000Z'),
+          endDate: new Date('2026-08-11T09:30:00.000Z'),
+        }),
+      );
+
+      await repositories.userRepository.save(
+        await makeUser({
+          id: 'u-2',
+          name: 'Barbeiro Dois',
+          email: 'barbeiro-dois@example.com',
+          phone: '11900000002',
+        }),
+      );
+      await repositories.barbershopRepository.save(
+        await makeBarbershop({
+          id: 'b-2',
+          name: 'Barbearia Dois',
+          slug: 'barbearia-dois',
+          email: 'barbearia-dois@example.com',
+          phone: '11900000003',
+          password: 'SenhaForte1',
+        }),
+      );
+      await repositories.serviceRepository.save(
+        new Service({
+          id: 's-2',
+          barbershopId: 'b-2',
+          name: 'Barba',
+          priceCents: 1500,
+          durationMinutes: 20,
+        }),
+      );
+      await repositories.customerRepository.save(
+        new Customer({
+          id: 'c-2',
+          barbershopId: 'b-2',
+          name: 'Cliente Dois',
+          phone: '11900000004',
+        }),
+      );
+      await repositories.appointmentRepository.save(
+        new Appointment({
+          id: 'a-3',
+          barbershopId: 'b-2',
+          barberId: 'u-2',
+          serviceId: 's-2',
+          customerId: 'c-2',
+          startDate: new Date('2026-08-10T11:00:00.000Z'),
+          endDate: new Date('2026-08-10T11:20:00.000Z'),
+        }),
+      );
+
+      const allB1 = await repositories.appointmentRepository.findAllByBarbershop('b-1');
+      const allB2 = await repositories.appointmentRepository.findAllByBarbershop('b-2');
+
+      expect(allB1.map(a => a.id)).toEqual(['a-1', 'a-2']);
+      expect(allB2.map(a => a.id)).toEqual(['a-3']);
+      expect(allB1.some(a => a.id === 'a-3')).toBe(false);
     });
   });
 
@@ -352,7 +410,7 @@ describe('Database Integration (PostgreSQL)', () => {
 
   describe('Persistência', () => {
     it('deve persistir dados no arquivo entre instâncias do client', async () => {
-      const user = await makeUser({ id: 'u-persist', ...adminProps });
+      const user = await makeUser({ id: 'u-persist', ...userProps });
       await repositories.userRepository.save(user);
 
       const secondClient = createPrismaClient(TEST_DATABASE_URL);

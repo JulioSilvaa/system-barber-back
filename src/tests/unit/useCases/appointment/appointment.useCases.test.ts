@@ -6,13 +6,15 @@ import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListD
 import { Appointment } from '@/domain/entities/Appointment';
 import { Service } from '@/domain/entities/Service';
 import { Barbershop } from '@/domain/entities/Barbershop';
-import { UserBarbershop } from '@/domain/entities';
+import { UserBarbershop, CashRegister } from '@/domain/entities';
 import { makeAppointmentProps } from '@/tests/helpers/factories';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
+import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
+import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 
 describe('Appointment Use Cases Unit Tests', () => {
   let appointmentRepository: AppointmentRepositoryMemory;
@@ -20,6 +22,8 @@ describe('Appointment Use Cases Unit Tests', () => {
   let barbershopRepository: BarbershopRepositoryMemory;
   let userBarbershopRepository: UserBarbershopRepositoryMemory;
   let customerRepository: CustomerRepositoryMemory;
+  let cashRegisterRepository: CashRegisterRepositoryMemory;
+  let commissionRepository: CommissionRepositoryMemory;
 
   const BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
   const BARBER_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d480';
@@ -49,6 +53,8 @@ describe('Appointment Use Cases Unit Tests', () => {
     barbershopRepository = new BarbershopRepositoryMemory();
     userBarbershopRepository = new UserBarbershopRepositoryMemory();
     customerRepository = new CustomerRepositoryMemory();
+    cashRegisterRepository = new CashRegisterRepositoryMemory();
+    commissionRepository = new CommissionRepositoryMemory();
 
     await barbershopRepository.save(
       new Barbershop({
@@ -153,48 +159,164 @@ describe('Appointment Use Cases Unit Tests', () => {
   });
 
   describe('CompleteAppointmentUseCase', () => {
-    it('deve concluir um agendamento', async () => {
-      const appointment = new Appointment(
-        makeAppointmentProps({
-          id: 'appointment-1',
+    const makeCompleteUseCase = () =>
+      new CompleteAppointmentUseCase(
+        appointmentRepository,
+        serviceRepository,
+        userBarbershopRepository,
+        cashRegisterRepository,
+        commissionRepository,
+      );
+
+    const openRegister = () =>
+      cashRegisterRepository.save(
+        new CashRegister({
+          id: 'cash-register-1',
           barbershopId: BARBERSHOP_ID,
-          barberId: BARBER_ID,
-          serviceId: SERVICE_ID,
+          openedKey: '2026-08-10',
         }),
       );
-      await appointmentRepository.save(appointment);
 
-      const useCase = new CompleteAppointmentUseCase(appointmentRepository);
-      const output = await useCase.execute('appointment-1', BARBERSHOP_ID);
+    it('deve lançar erro com CASH_REGISTER_REQUIRED quando não há caixa aberto', async () => {
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-1',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+          }),
+        ),
+      );
+
+      await expect(
+        makeCompleteUseCase().execute({
+          appointmentId: 'appointment-1',
+          barbershopId: BARBERSHOP_ID,
+        }),
+      ).rejects.toMatchObject({ code: 'CASH_REGISTER_REQUIRED' });
+    });
+
+    it('deve concluir um agendamento cobrando o valor informado', async () => {
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-1',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+          }),
+        ),
+      );
+      await openRegister();
+
+      const output = await makeCompleteUseCase().execute({
+        appointmentId: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        paidPriceCents: 4500,
+        paymentMethod: 'PIX',
+      });
 
       expect(output.status).toBe('COMPLETED');
+      expect(output.pricePaidCents).toBe(4500);
+      expect(output.paymentMethod).toBe('PIX');
+    });
+
+    it('deve usar o preço do serviço quando o valor não é informado', async () => {
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-1',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+          }),
+        ),
+      );
+      await openRegister();
+
+      const output = await makeCompleteUseCase().execute({
+        appointmentId: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+      });
+
+      expect(output.pricePaidCents).toBe(4000);
+      expect(output.paymentMethod).toBe('CASH');
+    });
+
+    it('deve registrar entrada no caixa e gerar comissão do barbeiro', async () => {
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-1',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+          }),
+        ),
+      );
+      const membership = await userBarbershopRepository.findByUserAndBarbershop(
+        BARBER_ID,
+        BARBERSHOP_ID,
+      );
+      membership?.setCommissionRate(10);
+      if (membership) await userBarbershopRepository.save(membership);
+      await openRegister();
+
+      const output = await makeCompleteUseCase().execute({
+        appointmentId: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        paidPriceCents: 5000,
+        paymentMethod: 'CASH',
+      });
+
+      const register = await cashRegisterRepository.findOpenByBarbershop(BARBERSHOP_ID);
+      const movements = register ? await cashRegisterRepository.listMovements(register.id) : [];
+      expect(movements).toHaveLength(1);
+      expect(movements[0]).toMatchObject({
+        kind: 'ENTRY',
+        category: 'CASH',
+        amountCents: 5000,
+        appointmentId: output.id,
+      });
+
+      const commission = await commissionRepository.findByAppointment('appointment-1');
+      expect(commission).toMatchObject({ commissionCents: 500, rate: 10 });
     });
 
     it('deve lançar erro quando o agendamento não existe', async () => {
-      const useCase = new CompleteAppointmentUseCase(appointmentRepository);
+      const useCase = makeCompleteUseCase();
 
-      await expect(useCase.execute('inexistente', BARBERSHOP_ID)).rejects.toThrow(
-        'Agendamento não encontrado',
-      );
+      await expect(
+        useCase.execute({
+          appointmentId: 'inexistente',
+          barbershopId: BARBERSHOP_ID,
+        }),
+      ).rejects.toThrow('Agendamento não encontrado');
     });
 
     it('deve lançar erro ao concluir um agendamento cancelado', async () => {
-      const appointment = new Appointment(
-        makeAppointmentProps({
-          id: 'appointment-1',
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-1',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+            status: 'CANCELLED',
+          }),
+        ),
+      );
+      await openRegister();
+
+      const useCase = makeCompleteUseCase();
+
+      await expect(
+        useCase.execute({
+          appointmentId: 'appointment-1',
           barbershopId: BARBERSHOP_ID,
-          barberId: BARBER_ID,
-          serviceId: SERVICE_ID,
-          status: 'CANCELLED',
         }),
-      );
-      await appointmentRepository.save(appointment);
-
-      const useCase = new CompleteAppointmentUseCase(appointmentRepository);
-
-      await expect(useCase.execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
-        'appointment canceled',
-      );
+      ).rejects.toThrow('appointment canceled');
     });
   });
 

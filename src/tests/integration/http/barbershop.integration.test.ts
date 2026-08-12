@@ -19,7 +19,6 @@ describe('Barbershop HTTP Integration', () => {
 
   const barbershopPayload = {
     name: 'Barbearia Central',
-    slug: 'barbearia-central',
     email: 'contato@barbeariacentral.com',
     phone: '+5516999999999',
     password: 'SenhaForte1',
@@ -48,17 +47,30 @@ describe('Barbershop HTTP Integration', () => {
       expect(membershipsResponse.body).toEqual([]);
     });
 
-    it('deve retornar 400 quando o slug já está em uso', async () => {
+    it('deve gerar um slug com sufixo quando o nome colide com uma barbearia existente', async () => {
       const app = createApp();
 
-      await request(app).post('/api/barbershops').send(barbershopPayload);
+      const first = await request(app).post('/api/barbershops').send(barbershopPayload);
+      expect(first.status).toBe(201);
+      expect(first.body.slug).toBe('barbearia-central');
+
+      const second = await request(app)
+        .post('/api/barbershops')
+        .send({ ...barbershopPayload, email: 'central2@example.com' });
+
+      expect(second.status).toBe(201);
+      expect(second.body.slug).toBe('barbearia-central-2');
+    });
+
+    it('não deve permitir slug de palavra reservada (rota do painel)', async () => {
+      const app = createApp();
 
       const response = await request(app)
         .post('/api/barbershops')
-        .send({ ...barbershopPayload, name: 'Outra Barbearia' });
+        .send({ ...barbershopPayload, name: 'Login Barbers' });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(expect.objectContaining({ message: 'Slug já em uso' }));
+      expect(response.status).toBe(201);
+      expect(response.body.slug).not.toBe('login');
     });
 
     it('deve retornar 400 quando o email já está em uso', async () => {
@@ -68,7 +80,7 @@ describe('Barbershop HTTP Integration', () => {
 
       const response = await request(app)
         .post('/api/barbershops')
-        .send({ ...barbershopPayload, slug: 'outra-barbearia' });
+        .send({ ...barbershopPayload, name: 'Outra Barbearia' });
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(expect.objectContaining({ message: 'Email já em uso' }));
@@ -107,7 +119,6 @@ describe('Barbershop HTTP Integration', () => {
           name: 'Barbeiro João',
           email: 'barbeiro-publico@example.com',
           phone: '11988888888',
-          password: 'Password123',
           barbershopId: barbershop.body.id,
         });
 
@@ -160,7 +171,6 @@ describe('Barbershop HTTP Integration', () => {
           name: 'Barbeiro João',
           email: 'barbeiro-publico@example.com',
           phone: '11988888888',
-          password: 'Password123',
           barbershopId,
         });
       expect(barber.status).toBe(201);

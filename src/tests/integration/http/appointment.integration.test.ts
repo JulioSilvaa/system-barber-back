@@ -44,7 +44,6 @@ describe('Appointment HTTP Integration', () => {
         name: 'Barbeiro João',
         email: `barbeiro-${Date.now()}@example.com`,
         phone: '11988888888',
-        password: 'Password123',
         barbershopId,
       });
 
@@ -250,6 +249,33 @@ describe('Appointment HTTP Integration', () => {
         expect.objectContaining({ customerName: 'Maria Souza', status: 'SCHEDULED' }),
       );
     });
+
+    it('deve listar todos os agendamentos da barbearia quando não há data', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-todas', 'Barbearia Todas');
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
+
+      await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+
+      await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send(appointmentPayload(barber.id, service.id, '2026-08-11T15:00:00.000Z'));
+
+      const response = await request(app)
+        .get(`/api/barbershops/${barbershop.id}/appointments`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0].startDate).toBe('2026-08-10T14:00:00.000Z');
+      expect(response.body[1].startDate).toBe('2026-08-11T15:00:00.000Z');
+    });
   });
 
   describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete e cancel', () => {
@@ -267,16 +293,45 @@ describe('Appointment HTTP Integration', () => {
       return { barbershop, appointment: response.body as { id: string } };
     }
 
-    it('deve concluir um agendamento', async () => {
+    async function openCashRegister(app: Application, barbershopId: string, token: string) {
+      await request(app)
+        .post(`/api/barbershops/${barbershopId}/cash-register/open`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ openingAmountCents: 0 })
+        .expect(201);
+    }
+
+    it('deve retornar 400 com CASH_REGISTER_REQUIRED ao concluir sem caixa aberto', async () => {
       const app = createApp();
       const { barbershop, appointment } = await createAppointment(app);
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ paidPriceCents: 4000, paymentMethod: 'PIX' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(expect.objectContaining({ code: 'CASH_REGISTER_REQUIRED' }));
+    });
+
+    it('deve concluir um agendamento com caixa aberto', async () => {
+      const app = createApp();
+      const { barbershop, appointment } = await createAppointment(app);
+      await openCashRegister(app, barbershop.id, barbershop.token);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ paidPriceCents: 4500, paymentMethod: 'PIX' });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual(expect.objectContaining({ status: 'COMPLETED' }));
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          status: 'COMPLETED',
+          pricePaidCents: 4500,
+          paymentMethod: 'PIX',
+        }),
+      );
     });
 
     it('deve cancelar um agendamento', async () => {
@@ -294,6 +349,7 @@ describe('Appointment HTTP Integration', () => {
     it('deve retornar 400 ao concluir um agendamento já cancelado', async () => {
       const app = createApp();
       const { barbershop, appointment } = await createAppointment(app);
+      await openCashRegister(app, barbershop.id, barbershop.token);
 
       await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)

@@ -28,7 +28,6 @@ describe('User HTTP Integration', () => {
     name: 'John Doe',
     email: 'john@example.com',
     phone: '11999999999',
-    password: 'Password123',
   };
 
   const tokenService = new JwtTokenService();

@@ -71,8 +71,8 @@ describe('User Entity', () => {
   });
 
   describe('Validação de Telefone', () => {
-    it('deve exigir telefone', () => {
-      expect(() => User.create(makeUserProps({ phone: '' }))).toThrow('Telefone é obrigatório');
+    it('deve aceitar telefone vazio (opcional)', () => {
+      expect(() => User.create(makeUserProps({ phone: '' }))).not.toThrow();
     });
 
     it('deve validar quantidade de dígitos', () => {
@@ -101,34 +101,9 @@ describe('User Entity', () => {
   });
 
   describe('Validação de Senha', () => {
-    it('deve exigir senha', () => {
-      expect(() => User.create(makeUserProps({ password: undefined }))).toThrow(
-        'Senha é obrigatória',
-      );
-    });
-
-    it('deve validar tamanho mínimo', () => {
-      expect(() => User.create(makeUserProps({ password: 'Abc123' }))).toThrow(
-        'Senha deve ter entre 8 e 72 caracteres',
-      );
-    });
-
-    it('deve exigir letra maiúscula', () => {
-      expect(() => User.create(makeUserProps({ password: 'senha123' }))).toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
-    });
-
-    it('deve exigir letra minúscula', () => {
-      expect(() => User.create(makeUserProps({ password: 'SENHA123' }))).toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
-    });
-
-    it('deve exigir número', () => {
-      expect(() => User.create(makeUserProps({ password: 'SenhaTeste' }))).toThrow(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
+    it('não deve exigir senha (funcionário não possui senha)', () => {
+      expect(() => User.create(makeUserProps())).not.toThrow();
+      expect(User.create(makeUserProps())).not.toHaveProperty('password');
     });
   });
 
@@ -197,22 +172,6 @@ describe('User Entity', () => {
       expect(() => {
         user.phone = '123';
       }).toThrow('Telefone deve ter 10 ou 11 dígitos');
-    });
-
-    it('deve alterar senha', () => {
-      const user = User.create(makeUserProps());
-
-      user.password = 'NovaSenha123';
-
-      expect(user.password).toBe('NovaSenha123');
-    });
-
-    it('deve validar senha ao alterar', () => {
-      const user = User.create(makeUserProps());
-
-      expect(() => {
-        user.password = '123';
-      }).toThrow('Senha deve ter entre 8 e 72 caracteres');
     });
   });
 });

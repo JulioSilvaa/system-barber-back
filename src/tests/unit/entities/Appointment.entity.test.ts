@@ -94,7 +94,7 @@ describe('Appointment Entity', () => {
     it('deve concluir um agendamento SCHEDULED', () => {
       const appointment = new Appointment(makeAppointmentProps());
 
-      appointment.complete();
+      appointment.complete({ pricePaidCents: 5000, paymentMethod: 'CASH' });
 
       expect(appointment.status).toBe('COMPLETED');
     });
@@ -110,7 +110,9 @@ describe('Appointment Entity', () => {
     it('deve lançar erro ao concluir um agendamento cancelado', () => {
       const appointment = new Appointment(makeAppointmentProps({ status: 'CANCELLED' }));
 
-      expect(() => appointment.complete()).toThrow('appointment canceled');
+      expect(() => appointment.complete({ pricePaidCents: 5000, paymentMethod: 'CASH' })).toThrow(
+        'appointment canceled',
+      );
     });
 
     it('deve lançar erro ao cancelar um agendamento concluído', () => {

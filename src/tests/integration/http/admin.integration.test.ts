@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { Application } from 'express';
 import { createApp } from '@/infra/http/express/app';
 import { createMemoryRepositorySet } from '@/infra/repositories/factory';
 import { Admin } from '@/domain/entities';

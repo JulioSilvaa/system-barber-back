@@ -54,7 +54,6 @@ describe('Membership HTTP Integration', () => {
         name: 'Barbeiro João',
         email: 'barbeiro@example.com',
         phone: '11988888888',
-        password: 'Password123',
         barbershopId: barbershopA.id,
       };
 
@@ -66,15 +65,6 @@ describe('Membership HTTP Integration', () => {
       expect(createBarber.status).toBe(201);
       expect(createBarber.body).not.toHaveProperty('globalRole');
       const barberId = createBarber.body.id as string;
-
-      const login = await request(app)
-        .post('/api/auth/login')
-        .send({ email: barberPayload.email, password: barberPayload.password });
-
-      expect(login.status).toBe(200);
-      expect(login.body.user).toEqual(
-        expect.objectContaining({ barbershopId: barbershopA.id, localRole: 'BARBER' }),
-      );
 
       const addToB = await request(app)
         .post('/api/memberships')
@@ -101,12 +91,6 @@ describe('Membership HTTP Integration', () => {
         (membership: { barbershopId: string; status: string }) => membership.status === 'ACTIVE',
       );
       expect(activeAfterSwitch.barbershopId).toBe(barbershopB.id);
-
-      const loginAfterSwitch = await request(app)
-        .post('/api/auth/login')
-        .send({ email: barberPayload.email, password: barberPayload.password });
-
-      expect(loginAfterSwitch.body.user.barbershopId).toBe(barbershopB.id);
     });
 
     it('deve retornar 403 quando um usuário (não a barbearia) tenta adicionar um barbeiro', async () => {
@@ -162,7 +146,6 @@ describe('Membership HTTP Integration', () => {
           name: 'Barbeiro Lista',
           email: 'lista@example.com',
           phone: '11911111111',
-          password: 'Password123',
           barbershopId: barbershop.id,
         });
 
@@ -206,7 +189,6 @@ describe('Membership HTTP Integration', () => {
           name: 'Barbeiro Status',
           email: 'status@example.com',
           phone: '11977777777',
-          password: 'Password123',
           barbershopId: barbershop.id,
         });
 
@@ -245,7 +227,6 @@ describe('Membership HTTP Integration', () => {
           name: 'Barbeiro Remove',
           email: 'remove@example.com',
           phone: '11966666666',
-          password: 'Password123',
           barbershopId: barbershop.id,
         });
 
@@ -300,7 +281,6 @@ describe('Membership HTTP Integration', () => {
         name: 'Barbeiro Robot',
         email: 'robot@example.com',
         phone: '11955555555',
-        password: 'Password123',
         barbershopId: barbershop.id,
       };
 

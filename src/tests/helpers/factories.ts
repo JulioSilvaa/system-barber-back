@@ -45,6 +45,8 @@ export type AppointmentProps = {
   startDate: Date;
   endDate: Date;
   status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  pricePaidCents?: number | null;
+  paymentMethod?: 'PIX' | 'CARD' | 'CASH' | null;
 };
 
 export type CustomerProps = {
@@ -62,7 +64,6 @@ export function makeUserProps(overrides: Partial<UserProps> = {}): UserProps {
     name: 'João da Silva',
     email: 'joao@example.com',
     phone: '16999999999',
-    password: 'Senha@123',
     isActive: true,
     ...overrides,
   };
