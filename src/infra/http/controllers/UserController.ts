@@ -9,6 +9,7 @@ import { UserBarbershop } from '@/domain/entities';
 import IUserRepository from '@/domain/repository/UserRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { emitDataChanged } from '@/infra/websocket/socketServer';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
@@ -25,12 +26,7 @@ export default class UserController {
     userBarbershopRepository: IUserBarbershopRepository = new UserBarbershopRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
   ) {
-    this.createUserUseCase = new CreateUserUseCase(
-      userRepository,
-      undefined,
-      undefined,
-      auditService,
-    );
+    this.createUserUseCase = new CreateUserUseCase(userRepository, undefined, auditService);
     this.deleteUserUseCase = new DeleteUserUseCase(userRepository, auditService);
     this.listUserUseCase = new ListUserUseCase(userRepository);
     this.userBarbershopRepository = userBarbershopRepository;
@@ -45,7 +41,6 @@ export default class UserController {
           name: req.body.name,
           email: req.body.email,
           phone: req.body.phone,
-          password: req.body.password,
         },
         auditCtx,
       );
@@ -83,6 +78,8 @@ export default class UserController {
             localRole: membership.localRole,
           },
         });
+
+        emitDataChanged(barbershopId);
       }
 
       return res.status(201).json(output);

@@ -8,6 +8,7 @@ import { Customer } from '@/domain/entities/Customer';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { emitDataChanged } from '@/infra/websocket/socketServer';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
@@ -56,6 +57,7 @@ export default class CustomerController {
         buildAuditContext(req),
       );
 
+      emitDataChanged(output.barbershopId);
       return res.status(201).json(toCustomerOutput(output));
     } catch (error) {
       next(error);
@@ -87,6 +89,7 @@ export default class CustomerController {
         buildAuditContext(req),
       );
 
+      emitDataChanged(barbershopId);
       return res.status(200).json(toCustomerOutput(customer));
     } catch (error) {
       next(error);

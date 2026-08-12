@@ -58,7 +58,7 @@ describe('Auth Middleware', () => {
       requireAuth(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Formato do token inválido' });
+      expect(res.json).toHaveBeenCalledWith({ message: 'Token não fornecido' });
       expect(next).not.toHaveBeenCalled();
     });
 

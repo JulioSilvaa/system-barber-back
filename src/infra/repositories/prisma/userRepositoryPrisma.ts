@@ -7,8 +7,7 @@ function toEntity(row: PrismaUser): User {
     id: row.id,
     name: row.name,
     email: row.email,
-    phone: row.phone,
-    password: row.password ?? undefined,
+    phone: row.phone ?? undefined,
     isActive: row.isActive,
   });
 }
@@ -22,7 +21,6 @@ export default class UserRepositoryPrisma implements IUserRepository {
       name: user.name,
       email: user.email.toLowerCase(),
       phone: user.phone,
-      password: user.password ?? null,
       isActive: user.isActive,
     };
 

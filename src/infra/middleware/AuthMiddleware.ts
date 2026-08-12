@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import { ACCESS_COOKIE } from '@/infra/http/helpers/authCookie';
 
 interface IPayload {
   sub: string;
@@ -42,15 +43,12 @@ export function resolveBarbershop(barbershopRepository: IBarbershopRepository) {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
+  const cookieToken = (req.cookies as Record<string, string> | undefined)?.[ACCESS_COOKIE];
 
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Token não fornecido' });
-  }
-
-  const [, token] = authHeader.split(' ');
+  const token = authHeader ? authHeader.split(' ')[1] : cookieToken;
 
   if (!token) {
-    return res.status(401).json({ message: 'Formato do token inválido' });
+    return res.status(401).json({ message: 'Token não fornecido' });
   }
 
   if (!process.env.JWT_ACCESS_SECRET) {

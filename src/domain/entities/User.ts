@@ -2,8 +2,7 @@ export type UserProps = {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  password?: string;
+  phone?: string;
   isActive?: boolean;
 };
 
@@ -11,8 +10,7 @@ export default class User {
   public _id: string;
   public _name: string;
   public _email: string;
-  public _phone: string;
-  public _password?: string;
+  public _phone?: string;
   public _isActive: boolean;
 
   constructor(props: UserProps) {
@@ -20,7 +18,6 @@ export default class User {
     this._name = props.name;
     this._email = props.email;
     this._phone = props.phone;
-    this._password = props?.password;
     this._isActive = props.isActive ?? true;
     this.validate();
   }
@@ -42,12 +39,8 @@ export default class User {
     return this._email;
   }
 
-  get phone(): string {
+  get phone(): string | undefined {
     return this._phone;
-  }
-
-  get password(): string | undefined {
-    return this._password;
   }
 
   get isActive(): boolean {
@@ -65,14 +58,9 @@ export default class User {
     this.validateEmail();
   }
 
-  set phone(value: string) {
+  set phone(value: string | undefined) {
     this._phone = value;
     this.validatePhone();
-  }
-
-  set password(value: string | undefined) {
-    this._password = value;
-    this.validatePassword();
   }
 
   public activate(): void {
@@ -89,7 +77,6 @@ export default class User {
     this.validateName();
     this.validateEmail();
     this.validatePhone();
-    this.validatePassword();
   }
 
   private validateName(): void {
@@ -127,7 +114,7 @@ export default class User {
 
   private validatePhone(): void {
     if (!this._phone || this._phone.trim() === '') {
-      throw new Error('Telefone é obrigatório');
+      return;
     }
 
     const digits = this._phone.replace(/\D/g, '');
@@ -147,26 +134,6 @@ export default class User {
 
     if (digits.length === 11 && digits[2] !== '9') {
       throw new Error('Celulares devem começar com 9 após o DDD');
-    }
-  }
-
-  private validatePassword(): void {
-    if (!this._password) {
-      throw new Error('Senha é obrigatória');
-    }
-
-    if (this._password.length < 8 || this._password.length > 72) {
-      throw new Error('Senha deve ter entre 8 e 72 caracteres');
-    }
-
-    const hasUpperCase = /[A-Z]/.test(this._password);
-    const hasLowerCase = /[a-z]/.test(this._password);
-    const hasNumber = /[0-9]/.test(this._password);
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      throw new Error(
-        'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
-      );
     }
   }
 }
