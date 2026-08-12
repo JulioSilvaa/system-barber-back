@@ -18,6 +18,9 @@ ENV NODE_ENV=production
 COPY package.json yarn.lock ./
 RUN corepack enable && yarn install --production --frozen-lockfile --ignore-scripts
 COPY --from=build /app/dist ./dist
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 3333
-CMD ["node", "dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

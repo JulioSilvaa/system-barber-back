@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id           String          @id
+  id           String           @id
   name         String
-  email        String          @unique
-  phone        String
-  password     String?
-  isActive     Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  email        String           @unique
+  phone        String?
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   memberships  UserBarbershop[]
-  appointments Appointment[]   @relation("BarberAppointments")
+  appointments Appointment[]    @relation("BarberAppointments")
+  commissions  Commission[]     @relation("BarberCommissions")
+  evaluations  Evaluation[]     @relation("BarberEvaluations")
 
   @@map("users")
 }
@@ -35,33 +36,41 @@ model Admin {
 }
 
 model Barbershop {
-  id           String          @id
-  name         String
-  slug         String          @unique
-  email        String          @unique
-  phone        String
-  password     String
-  isActive     Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  memberships  UserBarbershop[]
-  services     Service[]
-  appointments Appointment[]
-  customers    Customer[]
+  id            String                 @id
+  name          String
+  slug          String                 @unique
+  email         String                 @unique
+  phone         String
+  password      String
+  primaryColor  String?
+  logoUrl       String?
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  memberships   UserBarbershop[]
+  services      Service[]
+  appointments  Appointment[]
+  customers     Customer[]
+  workingHours  WorkingHours[]
+  commissions   Commission[]
+  cashRegisters CashRegister[]
+  movements     CashRegisterMovement[]
+  evaluations   Evaluation[]
 
   @@map("barbershops")
 }
 
 model UserBarbershop {
-  id           String     @id
-  userId       String
-  barbershopId String
-  status       String     @default("ACTIVE")
-  localRole    String     @default("BARBER")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  id             String     @id
+  userId         String
+  barbershopId   String
+  status         String     @default("ACTIVE")
+  localRole      String     @default("BARBER")
+  commissionRate Int?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  barbershop     Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
 
   @@unique([userId, barbershopId])
   @@map("user_barbershops")
@@ -83,20 +92,25 @@ model Service {
 }
 
 model Appointment {
-  id           String     @id
-  barbershopId String
-  barberId     String
-  serviceId    String
-  customerId   String
-  startDate    DateTime
-  endDate      DateTime
-  status       String     @default("SCHEDULED")
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  barber       User       @relation("BarberAppointments", fields: [barberId], references: [id])
-  service      Service    @relation(fields: [serviceId], references: [id])
-  customer     Customer   @relation(fields: [customerId], references: [id])
+  id             String                 @id
+  barbershopId   String
+  barberId       String
+  serviceId      String
+  customerId     String
+  startDate      DateTime
+  endDate        DateTime
+  status         String                 @default("SCHEDULED")
+  pricePaidCents Int?
+  paymentMethod  String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  barbershop     Barbershop             @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber         User                   @relation("BarberAppointments", fields: [barberId], references: [id])
+  service        Service                @relation(fields: [serviceId], references: [id])
+  customer       Customer               @relation(fields: [customerId], references: [id])
+  commissions    Commission[]
+  movements      CashRegisterMovement[]
+  evaluations    Evaluation[]
 
   @@map("appointments")
 }
@@ -118,8 +132,23 @@ model Customer {
   @@map("customers")
 }
 
+model WorkingHours {
+  id           String     @id
+  barbershopId String
+  dayOfWeek    Int
+  isOpen       Boolean    @default(true)
+  openTime     String?
+  closeTime    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@unique([barbershopId, dayOfWeek])
+  @@map("working_hours")
+}
+
 model AuditLog {
-  id           String    @id
+  id           String   @id
   actorId      String?
   actorType    String
   actorRole    String?
@@ -129,10 +158,88 @@ model AuditLog {
   entityId     String
   before       Json?
   after        Json?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([barbershopId])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+model Commission {
+  id                String       @id
+  barbershopId      String
+  barberId          String
+  appointmentId     String?
+  serviceValueCents Int
+  commissionCents   Int
+  rate              Int
+  isPaid            Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  barbershop        Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber            User         @relation("BarberCommissions", fields: [barberId], references: [id])
+  appointment       Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([barbershopId])
+  @@index([barberId])
+  @@index([appointmentId])
+  @@map("commissions")
+}
+
+model CashRegister {
+  id                  String                 @id
+  barbershopId        String
+  openedKey           String
+  openedAt            DateTime               @default(now())
+  openingAmountCents  Int                    @default(0)
+  closedAt            DateTime?
+  closingAmountCents  Int?
+  expectedAmountCents Int?
+  differenceCents     Int?
+  note                String?
+  status              String                 @default("OPEN")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  barbershop          Barbershop             @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  movements           CashRegisterMovement[]
+
+  @@unique([barbershopId, openedKey])
+  @@index([barbershopId, status])
+  @@map("cash_registers")
+}
+
+model CashRegisterMovement {
+  id             String       @id
+  cashRegisterId String
+  barbershopId   String
+  kind           String
+  category       String
+  amountCents    Int
+  description    String?
+  appointmentId  String?
+  createdAt      DateTime     @default(now())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+  barbershop     Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([cashRegisterId])
+  @@index([appointmentId])
+  @@map("cash_register_movements")
+}
+
+model Evaluation {
+  id            String      @id
+  barbershopId  String
+  appointmentId String      @unique
+  barberId      String
+  rating        Int
+  comment       String?
+  createdAt     DateTime    @default(now())
+  barbershop    Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  barber        User        @relation("BarberEvaluations", fields: [barberId], references: [id])
+
+  @@index([barbershopId])
+  @@index([barberId])
+  @@map("evaluations")
 }

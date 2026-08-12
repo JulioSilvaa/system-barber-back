@@ -61,3 +61,7 @@ src/generated/
 
 # Husky generated files
 .husky/_/
+# ===================================
+# Uploads
+# ===================================
+uploads/

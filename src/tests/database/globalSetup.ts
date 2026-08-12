@@ -27,7 +27,7 @@ export default async function globalSetup() {
 
   await client.end();
 
-  execSync('yarn prisma db push', {
+  execSync('yarn prisma db push --accept-data-loss', {
     stdio: 'inherit',
     env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
   });

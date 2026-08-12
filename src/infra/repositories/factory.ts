@@ -4,8 +4,12 @@ import IAuditRepository from '@/domain/repository/AuditRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
+import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import IUserRepository from '@/domain/repository/UserRepository';
+import ICashRegisterRepository from '@/domain/repository/CashRegisterRepository';
+import ICommissionRepository from '@/domain/repository/CommissionRepository';
+import IEvaluationRepository from '@/domain/repository/EvaluationRepository';
 import AdminRepositoryMemory from '@/infra/repositories/inMemory/admin/adminRepositoryMemory';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
@@ -14,6 +18,10 @@ import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/cus
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
+import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
+import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
+import EvaluationRepositoryMemory from '@/infra/repositories/inMemory/evaluation/evaluationRepositoryMemory';
 import AdminRepositoryPrisma from '@/infra/repositories/prisma/adminRepositoryPrisma';
 import AppointmentRepositoryPrisma from '@/infra/repositories/prisma/appointmentRepositoryPrisma';
 import AuditRepositoryPrisma from '@/infra/repositories/prisma/auditRepositoryPrisma';
@@ -22,6 +30,12 @@ import CustomerRepositoryPrisma from '@/infra/repositories/prisma/customerReposi
 import ServiceRepositoryPrisma from '@/infra/repositories/prisma/serviceRepositoryPrisma';
 import UserBarbershopRepositoryPrisma from '@/infra/repositories/prisma/userBarbershopRepositoryPrisma';
 import UserRepositoryPrisma from '@/infra/repositories/prisma/userRepositoryPrisma';
+import WorkingHoursRepositoryPrisma from '@/infra/repositories/prisma/workingHoursRepositoryPrisma';
+import {
+  CashRegisterRepositoryPrisma,
+  CommissionRepositoryPrisma,
+} from '@/infra/repositories/prisma/financeRepositoryPrisma';
+import { EvaluationRepositoryPrisma } from '@/infra/repositories/prisma/evaluationRepositoryPrisma';
 import { getPrismaClient } from '@/infra/database/prisma';
 import type { PrismaClient } from '@/generated/prisma/client';
 
@@ -36,6 +50,10 @@ export interface RepositorySet {
   appointmentRepository: IAppointmentRepository;
   customerRepository: ICustomerRepository;
   auditRepository: IAuditRepository;
+  workingHoursRepository: IWorkingHoursRepository;
+  cashRegisterRepository: ICashRegisterRepository;
+  commissionRepository: ICommissionRepository;
+  evaluationRepository: IEvaluationRepository;
 }
 
 export function createMemoryRepositorySet(): RepositorySet {
@@ -48,6 +66,10 @@ export function createMemoryRepositorySet(): RepositorySet {
     appointmentRepository: new AppointmentRepositoryMemory(),
     customerRepository: new CustomerRepositoryMemory(),
     auditRepository: new AuditRepositoryMemory(),
+    workingHoursRepository: new WorkingHoursRepositoryMemory(),
+    cashRegisterRepository: new CashRegisterRepositoryMemory(),
+    commissionRepository: new CommissionRepositoryMemory(),
+    evaluationRepository: new EvaluationRepositoryMemory(),
   };
 }
 
@@ -61,6 +83,10 @@ export function createPrismaRepositorySet(prisma: PrismaClient = getPrismaClient
     appointmentRepository: new AppointmentRepositoryPrisma(prisma),
     customerRepository: new CustomerRepositoryPrisma(prisma),
     auditRepository: new AuditRepositoryPrisma(prisma),
+    workingHoursRepository: new WorkingHoursRepositoryPrisma(prisma),
+    cashRegisterRepository: new CashRegisterRepositoryPrisma(prisma),
+    commissionRepository: new CommissionRepositoryPrisma(prisma),
+    evaluationRepository: new EvaluationRepositoryPrisma(prisma),
   };
 }
 
