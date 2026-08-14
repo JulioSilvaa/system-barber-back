@@ -7,6 +7,7 @@ import { Appointment } from '@/domain/entities/Appointment';
 import { Service } from '@/domain/entities/Service';
 import { Barbershop } from '@/domain/entities/Barbershop';
 import { UserBarbershop } from '@/domain/entities';
+import { WorkingHours } from '@/domain/entities/WorkingHours';
 import { makeAppointmentProps } from '@/tests/helpers/factories';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
@@ -14,6 +15,7 @@ import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
+import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 
 describe('Appointment Use Cases Unit Tests', () => {
   let appointmentRepository: AppointmentRepositoryMemory;
@@ -36,13 +38,15 @@ describe('Appointment Use Cases Unit Tests', () => {
     startDate: new Date('2026-08-20T14:00:00.000Z'),
   };
 
-  const makeCreateUseCase = () =>
+  const makeCreateUseCase = (workingHoursRepository?: WorkingHoursRepositoryMemory) =>
     new CreateAppointmentUseCase(
       appointmentRepository,
       barbershopRepository,
       serviceRepository,
       userBarbershopRepository,
       customerRepository,
+      undefined,
+      workingHoursRepository,
     );
 
   beforeEach(async () => {
@@ -376,6 +380,68 @@ describe('Appointment Use Cases Unit Tests', () => {
 
       expect(appointments).toHaveLength(1);
       expect(appointments[0].id).toBe('appointment-1');
+    });
+  });
+
+  describe('CreateAppointmentUseCase - working hours', () => {
+    const workingHoursRepository = new WorkingHoursRepositoryMemory();
+
+    it('deve rejeitar agendamento quando o dia está fechado', async () => {
+      const useCase = makeCreateUseCase(workingHoursRepository);
+      const date = new Date('2026-08-16T14:00:00.000Z'); // domingo
+
+      await workingHoursRepository.save(
+        new WorkingHours({
+          id: 'wh-sun',
+          barbershopId: BARBERSHOP_ID,
+          dayOfWeek: date.getDay(),
+          isOpen: false,
+        }),
+      );
+
+      await expect(useCase.execute({ ...inputMock, startDate: date })).rejects.toThrow(
+        'Barbearia fechada neste dia',
+      );
+    });
+
+    it('deve rejeitar agendamento fora do expediente do barbeiro', async () => {
+      const useCase = makeCreateUseCase(workingHoursRepository);
+      const date = new Date('2026-08-20T08:00:00.000Z'); // quinta 08:00
+
+      await workingHoursRepository.save(
+        new WorkingHours({
+          id: 'wh-barber',
+          barbershopId: BARBERSHOP_ID,
+          barberId: BARBER_ID,
+          dayOfWeek: date.getDay(),
+          isOpen: true,
+          openTime: '09:00',
+          closeTime: '18:00',
+        }),
+      );
+
+      await expect(useCase.execute({ ...inputMock, startDate: date })).rejects.toThrow(
+        'Horário fora do expediente',
+      );
+    });
+
+    it('deve aceitar agendamento dentro do expediente do barbeiro', async () => {
+      const useCase = makeCreateUseCase(workingHoursRepository);
+      const date = new Date('2026-08-20T14:00:00.000Z'); // quinta 14:00
+
+      await workingHoursRepository.save(
+        new WorkingHours({
+          id: 'wh-barber-ok',
+          barbershopId: BARBERSHOP_ID,
+          barberId: BARBER_ID,
+          dayOfWeek: date.getDay(),
+          isOpen: true,
+          openTime: '09:00',
+          closeTime: '18:00',
+        }),
+      );
+
+      await expect(useCase.execute({ ...inputMock, startDate: date })).resolves.toBeDefined();
     });
   });
 });

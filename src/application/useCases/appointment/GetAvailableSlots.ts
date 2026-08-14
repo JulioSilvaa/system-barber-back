@@ -1,6 +1,10 @@
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
+import {
+  resolveWorkingHours,
+  timeToMinutes,
+} from '@/application/useCases/appointment/workingHours';
 
 export type AvailableSlotsInputDTO = {
   barbershopId: string;
@@ -14,10 +18,6 @@ export type AvailableSlot = {
   startDate: Date;
   endDate: Date;
 };
-
-const DEFAULT_OPEN_MINUTES_PER_DAY = 480;
-const DEFAULT_START_MINUTE = 9 * 60;
-const DEFAULT_END_MINUTE = DEFAULT_START_MINUTE + DEFAULT_OPEN_MINUTES_PER_DAY;
 
 export default class GetAvailableSlotsUseCase {
   constructor(
@@ -33,11 +33,15 @@ export default class GetAvailableSlotsUseCase {
     }
 
     const duration = service.durationMinutes;
-    const workingHours = await this.resolveWorkingHours(input.barbershopId, input.barberId);
+    const workingHours = await resolveWorkingHours(
+      this.workingHoursRepository,
+      input.barbershopId,
+      input.barberId,
+    );
     const dayHours = workingHours.find(wh => wh.dayOfWeek === input.date.getDay());
 
-    let startMinute = DEFAULT_START_MINUTE;
-    let endMinute = DEFAULT_END_MINUTE;
+    let startMinute = timeToMinutes(DEFAULT_OPEN_TIME);
+    let endMinute = timeToMinutes(DEFAULT_CLOSE_TIME);
     if (dayHours) {
       if (!dayHours.isOpen || !dayHours.openTime || !dayHours.closeTime) {
         return [];
@@ -94,43 +98,10 @@ export default class GetAvailableSlotsUseCase {
 
     return slots;
   }
-
-  private async resolveWorkingHours(
-    barbershopId: string,
-    barberId?: string | null,
-  ): Promise<
-    { dayOfWeek: number; isOpen: boolean; openTime: string | null; closeTime: string | null }[]
-  > {
-    if (barberId) {
-      const barberHours = await this.workingHoursRepository.findByBarber(barbershopId, barberId);
-      if (barberHours.length > 0) {
-        return barberHours;
-      }
-    }
-
-    const hours = await this.workingHoursRepository.findAll(barbershopId);
-    if (hours.length > 0) {
-      return hours;
-    }
-
-    return DEFAULT_WORKING_HOURS;
-  }
 }
 
-const DEFAULT_WORKING_HOURS = [
-  { dayOfWeek: 0, isOpen: false, openTime: null, closeTime: null },
-  { dayOfWeek: 1, isOpen: true, openTime: '09:00', closeTime: '19:00' },
-  { dayOfWeek: 2, isOpen: true, openTime: '09:00', closeTime: '19:00' },
-  { dayOfWeek: 3, isOpen: true, openTime: '09:00', closeTime: '19:00' },
-  { dayOfWeek: 4, isOpen: true, openTime: '09:00', closeTime: '19:00' },
-  { dayOfWeek: 5, isOpen: true, openTime: '09:00', closeTime: '20:00' },
-  { dayOfWeek: 6, isOpen: true, openTime: '09:00', closeTime: '18:00' },
-];
-
-function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
+const DEFAULT_OPEN_TIME = '09:00';
+const DEFAULT_CLOSE_TIME = '17:00';
 
 function isSameDay(a: Date, b: Date): boolean {
   return (

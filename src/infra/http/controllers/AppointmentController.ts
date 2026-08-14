@@ -71,6 +71,7 @@ export default class AppointmentController {
       userBarbershopRepository,
       customerRepository,
       auditService,
+      workingHoursRepository,
     );
     this.completeAppointmentUseCase = new CompleteAppointmentUseCase(
       appointmentRepository,
