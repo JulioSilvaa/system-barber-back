@@ -60,20 +60,25 @@ export default class WorkingHoursRepositoryPrisma implements IWorkingHoursReposi
         },
       });
     } else {
-      await this.prisma.workingHours.upsert({
+      const existing = await this.prisma.workingHours.findFirst({
         where: {
-          barbershopId_dayOfWeek: {
-            barbershopId: workingHours.barbershopId,
-            dayOfWeek: workingHours.dayOfWeek,
-          },
-        },
-        create: { id: workingHours.id, ...data },
-        update: {
-          isOpen: workingHours.isOpen,
-          openTime: workingHours.openTime,
-          closeTime: workingHours.closeTime,
+          barbershopId: workingHours.barbershopId,
+          barberId: null,
+          dayOfWeek: workingHours.dayOfWeek,
         },
       });
+      if (existing) {
+        await this.prisma.workingHours.update({
+          where: { id: existing.id },
+          data: {
+            isOpen: workingHours.isOpen,
+            openTime: workingHours.openTime,
+            closeTime: workingHours.closeTime,
+          },
+        });
+      } else {
+        await this.prisma.workingHours.create({ data: { id: workingHours.id, ...data } });
+      }
     }
 
     return workingHours;

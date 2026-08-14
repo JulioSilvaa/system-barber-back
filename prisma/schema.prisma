@@ -146,7 +146,6 @@ model WorkingHours {
   barbershop   Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
   barber       User?       @relation("BarberWorkingHours", fields: [barberId], references: [id], onDelete: Cascade)
 
-  @@unique([barbershopId, dayOfWeek])
   @@unique([barbershopId, barberId, dayOfWeek])
   @@map("working_hours")
 }
