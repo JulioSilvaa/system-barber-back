@@ -1,5 +1,6 @@
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
+import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 
@@ -11,6 +12,7 @@ export type FinancialDashboardDTO = {
     monthEnd: Date;
   };
   revenue: { todayCents: number; weekCents: number; monthCents: number };
+  forecast: { todayCents: number; weekCents: number; monthCents: number };
   completed: { week: number; month: number };
   commission: { weekTotalCents: number; monthTotalCents: number };
   occupancy: {
@@ -33,6 +35,7 @@ export default class GetFinancialDashboardUseCase {
     private readonly commissionRepository: ICommissionRepository,
     private readonly userBarbershopRepository: IUserBarbershopRepository,
     private readonly workingHoursRepository: IWorkingHoursRepository,
+    private readonly serviceRepository: IServiceRepository,
   ) {}
 
   async execute(barbershopId: string): Promise<FinancialDashboardDTO> {
@@ -43,12 +46,15 @@ export default class GetFinancialDashboardUseCase {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
-    const [appointments, commissions, activeBarbers, workingHours] = await Promise.all([
+    const [appointments, commissions, activeBarbers, workingHours, services] = await Promise.all([
       this.appointmentRepository.findAllByBarbershop(barbershopId),
       this.commissionRepository.findByBarbershop(barbershopId),
       this.userBarbershopRepository.findActiveByBarbershop(barbershopId),
       this.workingHoursRepository.findAll(barbershopId),
+      this.serviceRepository.findAll(barbershopId),
     ]);
+
+    const priceByService = new Map(services.map(service => [service.id, service.priceCents ?? 0]));
 
     const completedInWeek = appointments.filter(
       a => a.status === 'COMPLETED' && a.startDate >= weekStart && a.startDate < weekEnd,
@@ -83,9 +89,38 @@ export default class GetFinancialDashboardUseCase {
     const occupiedMonth = this.occupiedMinutes(appointments, monthStart, monthEnd);
     const availableMonth = this.availableMinutes(monthStart, monthEnd, barberCount, whByDay);
 
+    const scheduledInWeek = appointments.filter(
+      a => a.status === 'SCHEDULED' && a.startDate >= weekStart && a.startDate < weekEnd,
+    );
+    const scheduledInMonth = appointments.filter(
+      a => a.status === 'SCHEDULED' && a.startDate >= monthStart && a.startDate < monthEnd,
+    );
+
+    const todayForecastCents = appointments
+      .filter(
+        a =>
+          a.status === 'SCHEDULED' &&
+          a.startDate >= todayStart &&
+          a.startDate < endOfDay(todayStart),
+      )
+      .reduce((sum, a) => sum + (priceByService.get(a.serviceId) ?? 0), 0);
+    const weekForecastCents = scheduledInWeek.reduce(
+      (sum, a) => sum + (priceByService.get(a.serviceId) ?? 0),
+      0,
+    );
+    const monthForecastCents = scheduledInMonth.reduce(
+      (sum, a) => sum + (priceByService.get(a.serviceId) ?? 0),
+      0,
+    );
+
     return {
       period: { weekStart, weekEnd, monthStart, monthEnd },
       revenue: { todayCents, weekCents, monthCents },
+      forecast: {
+        todayCents: todayForecastCents,
+        weekCents: weekForecastCents,
+        monthCents: monthForecastCents,
+      },
       completed: { week: completedInWeek.length, month: completedInMonth.length },
       commission: { weekTotalCents: weekCommission, monthTotalCents: monthCommission },
       occupancy: {

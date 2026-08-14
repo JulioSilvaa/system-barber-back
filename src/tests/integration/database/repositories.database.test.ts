@@ -222,8 +222,8 @@ describe('Database Integration (PostgreSQL)', () => {
         }),
       );
 
-      const startDate = new Date('2026-08-10T10:00:00.000Z');
-      const endDate = new Date('2026-08-10T10:30:00.000Z');
+      const startDate = new Date('2026-08-20T10:00:00.000Z');
+      const endDate = new Date('2026-08-20T10:30:00.000Z');
 
       const appointment = new Appointment({
         id: 'a-1',
@@ -243,12 +243,12 @@ describe('Database Integration (PostgreSQL)', () => {
       const sameDay = await repositories.appointmentRepository.findByBarberAndDate(
         'u-1',
         'b-1',
-        new Date('2026-08-10T15:00:00.000Z'),
+        new Date('2026-08-20T15:00:00.000Z'),
       );
       const otherDay = await repositories.appointmentRepository.findByBarberAndDate(
         'u-1',
         'b-1',
-        new Date('2026-08-11T15:00:00.000Z'),
+        new Date('2026-08-21T15:00:00.000Z'),
       );
 
       expect(sameDay).toHaveLength(1);
@@ -256,11 +256,11 @@ describe('Database Integration (PostgreSQL)', () => {
 
       const barbershopSameDay = await repositories.appointmentRepository.findByBarbershopAndDate(
         'b-1',
-        new Date('2026-08-10T15:00:00.000Z'),
+        new Date('2026-08-20T15:00:00.000Z'),
       );
       const barbershopOtherDay = await repositories.appointmentRepository.findByBarbershopAndDate(
         'b-1',
-        new Date('2026-08-11T15:00:00.000Z'),
+        new Date('2026-08-21T15:00:00.000Z'),
       );
 
       expect(barbershopSameDay).toHaveLength(1);
@@ -273,8 +273,8 @@ describe('Database Integration (PostgreSQL)', () => {
           barberId: 'u-1',
           serviceId: 's-1',
           customerId: 'c-1',
-          startDate: new Date('2026-08-11T09:00:00.000Z'),
-          endDate: new Date('2026-08-11T09:30:00.000Z'),
+          startDate: new Date('2026-08-21T09:00:00.000Z'),
+          endDate: new Date('2026-08-21T09:30:00.000Z'),
         }),
       );
 
@@ -320,8 +320,8 @@ describe('Database Integration (PostgreSQL)', () => {
           barberId: 'u-2',
           serviceId: 's-2',
           customerId: 'c-2',
-          startDate: new Date('2026-08-10T11:00:00.000Z'),
-          endDate: new Date('2026-08-10T11:20:00.000Z'),
+          startDate: new Date('2026-08-20T11:00:00.000Z'),
+          endDate: new Date('2026-08-20T11:20:00.000Z'),
         }),
       );
 
@@ -493,14 +493,14 @@ describe('Database Integration (PostgreSQL)', () => {
           serviceId,
           customerName: 'Cliente Flow',
           customerPhone: '11988888888',
-          startDate: '2026-08-10T14:00:00.000Z',
+          startDate: '2026-08-20T14:00:00.000Z',
         });
 
       expect(createAppointment.status).toBe(201);
       expect(createAppointment.body.status).toBe('SCHEDULED');
 
       const listDay = await request(app)
-        .get(`/api/barbershops/${barbershopId}/appointments?date=2026-08-10`)
+        .get(`/api/barbershops/${barbershopId}/appointments?date=2026-08-20`)
         .set('Authorization', `Bearer ${token}`);
 
       expect(listDay.status).toBe(200);

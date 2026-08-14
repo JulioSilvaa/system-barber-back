@@ -12,7 +12,6 @@ import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
-import ICashRegisterRepository from '@/domain/repository/CashRegisterRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
@@ -20,7 +19,6 @@ import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/servi
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
-import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 
 export interface AppointmentRoutesDeps {
@@ -29,7 +27,6 @@ export interface AppointmentRoutesDeps {
   barbershopRepository: IBarbershopRepository;
   userBarbershopRepository: IUserBarbershopRepository;
   customerRepository: ICustomerRepository;
-  cashRegisterRepository?: ICashRegisterRepository;
   commissionRepository?: ICommissionRepository;
   auditService: AuditService;
 }
@@ -43,7 +40,6 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
   const userBarbershopRepository =
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
   const customerRepository = deps?.customerRepository ?? new CustomerRepositoryMemory();
-  const cashRegisterRepository = deps?.cashRegisterRepository ?? new CashRegisterRepositoryMemory();
   const commissionRepository = deps?.commissionRepository ?? new CommissionRepositoryMemory();
   const auditService = deps?.auditService ?? new AuditService(new AuditRepositoryMemory());
 
@@ -54,7 +50,6 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
     userBarbershopRepository,
     customerRepository,
     auditService,
-    cashRegisterRepository,
     commissionRepository,
   );
 

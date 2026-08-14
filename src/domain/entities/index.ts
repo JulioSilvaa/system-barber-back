@@ -7,7 +7,6 @@ export { Service } from './Service';
 export { WorkingHours } from './WorkingHours';
 export { default as User } from './User';
 export { default as UserBarbershop } from './UserBarbershop';
-export { default as CashRegister } from './CashRegister';
-export { default as CashRegisterMovement } from './CashRegisterMovement';
 export { default as Commission } from './Commission';
 export { default as Evaluation } from './Evaluation';
+export { default as FinanceEntry } from './FinanceEntry';

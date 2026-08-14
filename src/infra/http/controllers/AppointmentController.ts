@@ -12,7 +12,6 @@ import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
-import ICashRegisterRepository from '@/domain/repository/CashRegisterRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
 import { emitToBarbershop, emitDataChanged } from '@/infra/websocket/socketServer';
@@ -22,7 +21,6 @@ import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/servi
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
-import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 
 type AppointmentOutputDTO = {
@@ -41,6 +39,7 @@ type AppointmentOutputDTO = {
   status: string;
   pricePaidCents?: number | null;
   paymentMethod?: string | null;
+  note?: string | null;
 };
 
 export default class AppointmentController {
@@ -58,7 +57,6 @@ export default class AppointmentController {
     userBarbershopRepository: IUserBarbershopRepository = new UserBarbershopRepositoryMemory(),
     customerRepository: ICustomerRepository = new CustomerRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
-    cashRegisterRepository: ICashRegisterRepository = new CashRegisterRepositoryMemory(),
     commissionRepository: ICommissionRepository = new CommissionRepositoryMemory(),
   ) {
     this.createAppointmentUseCase = new CreateAppointmentUseCase(
@@ -73,7 +71,6 @@ export default class AppointmentController {
       appointmentRepository,
       serviceRepository,
       userBarbershopRepository,
-      cashRegisterRepository,
       commissionRepository,
       auditService,
     );
@@ -137,7 +134,7 @@ export default class AppointmentController {
       const appointments = await this.listDayAppointmentsUseCase.execute(barbershopId, date);
 
       const busy = appointments
-        .filter(appointment => appointment.status !== 'CANCELLED')
+        .filter(appointment => appointment.status === 'SCHEDULED')
         .map(appointment => ({
           id: appointment.id,
           barberId: appointment.barberId,
@@ -167,6 +164,7 @@ export default class AppointmentController {
           barbershopId,
           paidPriceCents: body.paidPriceCents,
           paymentMethod: body.paymentMethod,
+          note: body.note,
         },
         buildAuditContext(req),
       );
@@ -236,6 +234,7 @@ export default class AppointmentController {
         status: appointment.status,
         pricePaidCents: appointment.pricePaidCents ?? null,
         paymentMethod: appointment.paymentMethod ?? null,
+        note: appointment.note ?? null,
       };
     });
   }

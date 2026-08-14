@@ -41,6 +41,10 @@ export default class CreateAppointmentUseCase {
       throw new Error('Data de início é obrigatória');
     }
 
+    if (input.startDate.getTime() < Date.now()) {
+      throw new Error('Não é possível agendar em um horário no passado');
+    }
+
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
       throw new Error('Barbearia não encontrada');
@@ -79,8 +83,8 @@ export default class CreateAppointmentUseCase {
       input.startDate,
     );
 
-    const hasConflict = barberAppointments.some(existing =>
-      existing.isOverlappingWith(appointment),
+    const hasConflict = barberAppointments.some(
+      existing => existing.status === 'SCHEDULED' && existing.isOverlappingWith(appointment),
     );
     if (hasConflict) {
       throw new Error('Já existe um agendamento neste horário');

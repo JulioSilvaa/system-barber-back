@@ -19,6 +19,7 @@ model User {
   appointments Appointment[]    @relation("BarberAppointments")
   commissions  Commission[]     @relation("BarberCommissions")
   evaluations  Evaluation[]     @relation("BarberEvaluations")
+  workingHours WorkingHours[]   @relation("BarberWorkingHours")
 
   @@map("users")
 }
@@ -53,9 +54,8 @@ model Barbershop {
   customers     Customer[]
   workingHours  WorkingHours[]
   commissions   Commission[]
-  cashRegisters CashRegister[]
-  movements     CashRegisterMovement[]
   evaluations   Evaluation[]
+  financeEntries FinanceEntry[]
 
   @@map("barbershops")
 }
@@ -92,25 +92,26 @@ model Service {
 }
 
 model Appointment {
-  id             String                 @id
+  id             String               @id
   barbershopId   String
   barberId       String
   serviceId      String
   customerId     String
   startDate      DateTime
   endDate        DateTime
-  status         String                 @default("SCHEDULED")
+  status         String               @default("SCHEDULED")
   pricePaidCents Int?
   paymentMethod  String?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  barbershop     Barbershop             @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  barber         User                   @relation("BarberAppointments", fields: [barberId], references: [id])
-  service        Service                @relation(fields: [serviceId], references: [id])
-  customer       Customer               @relation(fields: [customerId], references: [id])
+  note           String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  barbershop     Barbershop           @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber         User                 @relation("BarberAppointments", fields: [barberId], references: [id])
+  service        Service              @relation(fields: [serviceId], references: [id])
+  customer       Customer             @relation(fields: [customerId], references: [id])
   commissions    Commission[]
-  movements      CashRegisterMovement[]
   evaluations    Evaluation[]
+  financeEntries FinanceEntry[]
 
   @@map("appointments")
 }
@@ -133,17 +134,20 @@ model Customer {
 }
 
 model WorkingHours {
-  id           String     @id
+  id           String      @id
   barbershopId String
+  barberId     String?
   dayOfWeek    Int
-  isOpen       Boolean    @default(true)
+  isOpen       Boolean     @default(true)
   openTime     String?
   closeTime    String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  barbershop   Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       User?       @relation("BarberWorkingHours", fields: [barberId], references: [id], onDelete: Cascade)
 
   @@unique([barbershopId, dayOfWeek])
+  @@unique([barbershopId, barberId, dayOfWeek])
   @@map("working_hours")
 }
 
@@ -186,47 +190,6 @@ model Commission {
   @@map("commissions")
 }
 
-model CashRegister {
-  id                  String                 @id
-  barbershopId        String
-  openedKey           String
-  openedAt            DateTime               @default(now())
-  openingAmountCents  Int                    @default(0)
-  closedAt            DateTime?
-  closingAmountCents  Int?
-  expectedAmountCents Int?
-  differenceCents     Int?
-  note                String?
-  status              String                 @default("OPEN")
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
-  barbershop          Barbershop             @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  movements           CashRegisterMovement[]
-
-  @@unique([barbershopId, openedKey])
-  @@index([barbershopId, status])
-  @@map("cash_registers")
-}
-
-model CashRegisterMovement {
-  id             String       @id
-  cashRegisterId String
-  barbershopId   String
-  kind           String
-  category       String
-  amountCents    Int
-  description    String?
-  appointmentId  String?
-  createdAt      DateTime     @default(now())
-  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
-  barbershop     Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-
-  @@index([cashRegisterId])
-  @@index([appointmentId])
-  @@map("cash_register_movements")
-}
-
 model Evaluation {
   id            String      @id
   barbershopId  String
@@ -242,4 +205,21 @@ model Evaluation {
   @@index([barbershopId])
   @@index([barberId])
   @@map("evaluations")
+}
+
+model FinanceEntry {
+  id           String      @id
+  barbershopId String
+  kind         String
+  category     String?
+  amountCents  Int
+  description  String?
+  appointmentId String?
+  createdAt    DateTime    @default(now())
+  barbershop   Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([barbershopId])
+  @@index([appointmentId])
+  @@map("finance_entries")
 }

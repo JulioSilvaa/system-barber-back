@@ -1,6 +1,7 @@
 export type WorkingHoursProps = {
   id: string;
   barbershopId: string;
+  barberId?: string | null;
   dayOfWeek: number;
   isOpen?: boolean;
   openTime?: string | null;
@@ -12,6 +13,7 @@ const VALID_DAYS = [0, 1, 2, 3, 4, 5, 6];
 export class WorkingHours {
   public readonly id: string;
   public readonly barbershopId: string;
+  public readonly barberId: string | null;
   public readonly dayOfWeek: number;
   public readonly isOpen: boolean;
   public readonly openTime: string | null;
@@ -32,6 +34,7 @@ export class WorkingHours {
 
     this.id = props.id;
     this.barbershopId = props.barbershopId;
+    this.barberId = props.barberId ?? null;
     this.dayOfWeek = props.dayOfWeek;
     this.isOpen = props.isOpen ?? true;
     this.openTime = props.openTime ?? null;

@@ -81,7 +81,7 @@ describe('Appointment HTTP Integration', () => {
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
       expect(response.body).toEqual(
@@ -91,8 +91,8 @@ describe('Appointment HTTP Integration', () => {
           serviceId: service.id,
           customerName: 'Maria Souza',
           status: 'SCHEDULED',
-          startDate: '2026-08-10T14:00:00.000Z',
-          endDate: '2026-08-10T14:30:00.000Z',
+          startDate: '2026-08-20T14:00:00.000Z',
+          endDate: '2026-08-20T14:30:00.000Z',
         }),
       );
     });
@@ -103,7 +103,7 @@ describe('Appointment HTTP Integration', () => {
       const barber = await createBarber(app, barbershop.id, barbershop.token);
       const service = await createService(app, barbershop.id, barbershop.token);
 
-      const payload = appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z');
+      const payload = appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z');
 
       const first = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
@@ -132,12 +132,12 @@ describe('Appointment HTTP Integration', () => {
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T15:00:00.000Z'));
 
       expect(response.status).toBe(201);
     });
@@ -150,7 +150,7 @@ describe('Appointment HTTP Integration', () => {
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
       expect(response.body).toEqual(
@@ -166,13 +166,13 @@ describe('Appointment HTTP Integration', () => {
 
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
 
       const bySlug = await request(app)
         .post('/api/barbershops/barbearia-central/appointments')
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T15:00:00.000Z'));
 
       expect(bySlug.status).toBe(201);
     });
@@ -185,11 +185,11 @@ describe('Appointment HTTP Integration', () => {
 
       const first = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       const second = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T15:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T15:00:00.000Z'));
 
       expect(first.status).toBe(201);
       expect(second.status).toBe(201);
@@ -201,7 +201,7 @@ describe('Appointment HTTP Integration', () => {
 
       const response = await request(app)
         .post('/api/barbershops/barbearia-inexistente/appointments')
-        .send(appointmentPayload('barbeiro-1', 'servico-1', '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload('barbeiro-1', 'servico-1', '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(404);
       expect(response.body).toEqual(
@@ -219,7 +219,7 @@ describe('Appointment HTTP Integration', () => {
       const response = await request(app)
         .post(`/api/barbershops/${barbershopA.id}/appointments`)
         .set('Authorization', `Bearer ${barbershopA.token}`)
-        .send(appointmentPayload(barber.id, serviceB.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, serviceB.id, '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(expect.objectContaining({ message: 'Serviço não encontrado' }));
@@ -236,10 +236,10 @@ describe('Appointment HTTP Integration', () => {
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       const response = await request(app)
-        .get(`/api/barbershops/${barbershop.id}/appointments?date=2026-08-10`)
+        .get(`/api/barbershops/${barbershop.id}/appointments?date=2026-08-20`)
         .set('Authorization', `Bearer ${barbershop.token}`);
 
       expect(response.status).toBe(200);
@@ -259,12 +259,12 @@ describe('Appointment HTTP Integration', () => {
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-11T15:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-21T15:00:00.000Z'));
 
       const response = await request(app)
         .get(`/api/barbershops/${barbershop.id}/appointments`)
@@ -273,8 +273,8 @@ describe('Appointment HTTP Integration', () => {
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body).toHaveLength(2);
-      expect(response.body[0].startDate).toBe('2026-08-10T14:00:00.000Z');
-      expect(response.body[1].startDate).toBe('2026-08-11T15:00:00.000Z');
+      expect(response.body[0].startDate).toBe('2026-08-20T14:00:00.000Z');
+      expect(response.body[1].startDate).toBe('2026-08-21T15:00:00.000Z');
     });
   });
 
@@ -287,37 +287,39 @@ describe('Appointment HTTP Integration', () => {
       const response = await request(app)
         .post(`/api/barbershops/${barbershop.id}/appointments`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send(appointmentPayload(barber.id, service.id, '2026-08-10T14:00:00.000Z'));
+        .send(appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'));
 
       expect(response.status).toBe(201);
       return { barbershop, appointment: response.body as { id: string } };
     }
 
-    async function openCashRegister(app: Application, barbershopId: string, token: string) {
-      await request(app)
-        .post(`/api/barbershops/${barbershopId}/cash-register/open`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ openingAmountCents: 0 })
-        .expect(201);
-    }
-
-    it('deve retornar 400 com CASH_REGISTER_REQUIRED ao concluir sem caixa aberto', async () => {
+    it('deve concluir um agendamento salvando a nota informada', async () => {
       const app = createApp();
       const { barbershop, appointment } = await createAppointment(app);
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
         .set('Authorization', `Bearer ${barbershop.token}`)
-        .send({ paidPriceCents: 4000, paymentMethod: 'PIX' });
+        .send({
+          paidPriceCents: 5800,
+          paymentMethod: 'PIX',
+          note: 'Corte + pomada',
+        });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(expect.objectContaining({ code: 'CASH_REGISTER_REQUIRED' }));
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          status: 'COMPLETED',
+          pricePaidCents: 5800,
+          paymentMethod: 'PIX',
+          note: 'Corte + pomada',
+        }),
+      );
     });
 
-    it('deve concluir um agendamento com caixa aberto', async () => {
+    it('deve concluir um agendamento cobrando o valor informado', async () => {
       const app = createApp();
       const { barbershop, appointment } = await createAppointment(app);
-      await openCashRegister(app, barbershop.id, barbershop.token);
 
       const response = await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
@@ -349,7 +351,6 @@ describe('Appointment HTTP Integration', () => {
     it('deve retornar 400 ao concluir um agendamento já cancelado', async () => {
       const app = createApp();
       const { barbershop, appointment } = await createAppointment(app);
-      await openCashRegister(app, barbershop.id, barbershop.token);
 
       await request(app)
         .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)

@@ -13,6 +13,7 @@ export type DayScheduleInput = {
 
 export type UpdateWorkingHoursInputDTO = {
   barbershopId: string;
+  barberId?: string | null;
   days: DayScheduleInput[];
 };
 
@@ -41,6 +42,7 @@ export default class UpdateWorkingHoursUseCase {
       const workingHours = new WorkingHours({
         id: randomUUID(),
         barbershopId: input.barbershopId,
+        barberId: input.barberId ?? null,
         dayOfWeek: day.dayOfWeek,
         isOpen: day.isOpen,
         openTime: day.openTime,
@@ -55,7 +57,7 @@ export default class UpdateWorkingHoursUseCase {
       action: 'UPDATE',
       entityType: 'WORKING_HOURS',
       entityId: input.barbershopId,
-      after: { days: input.days },
+      after: { barberId: input.barberId ?? null, days: input.days },
     });
 
     return saved;

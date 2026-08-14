@@ -1,8 +1,4 @@
-export type AppErrorCode =
-  | 'CASH_REGISTER_REQUIRED'
-  | 'CASH_REGISTER_ALREADY_OPEN'
-  | 'CASH_REGISTER_ALREADY_CLOSED'
-  | 'EVALUATION_ALREADY_EXISTS';
+export type AppErrorCode = 'EVALUATION_ALREADY_EXISTS';
 
 export class AppError extends Error {
   constructor(

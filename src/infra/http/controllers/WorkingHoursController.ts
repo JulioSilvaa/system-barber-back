@@ -32,7 +32,8 @@ export default class WorkingHoursController {
     try {
       const rawId = req.params.barbershopId ?? req.params.identifier;
       const barbershopId = req.barbershopId ?? (Array.isArray(rawId) ? rawId[0] : rawId);
-      const hours = await this.getWorkingHoursUseCase.execute(barbershopId);
+      const barberId = req.query.barberId ? String(req.query.barberId) : undefined;
+      const hours = await this.getWorkingHoursUseCase.execute(barbershopId, barberId);
       return res.status(200).json(hours);
     } catch (error) {
       next(error);
@@ -44,7 +45,11 @@ export default class WorkingHoursController {
       const rawId = req.params.barbershopId;
       const barbershopId = req.barbershopId ?? (Array.isArray(rawId) ? rawId[0] : rawId);
       const hours = await this.updateWorkingHoursUseCase.execute(
-        { barbershopId, days: req.body.days },
+        {
+          barbershopId,
+          barberId: req.body.barberId ?? null,
+          days: req.body.days,
+        },
         buildAuditContext(req),
       );
       emitDataChanged(barbershopId);

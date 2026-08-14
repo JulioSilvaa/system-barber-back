@@ -9,6 +9,9 @@ import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointme
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
+import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
+import { Service } from '@/domain/entities/Service';
+import { makeServiceProps } from '@/tests/helpers/factories';
 
 function daysFromToday(days: number, hour = 10): Date {
   const date = new Date();
@@ -22,6 +25,7 @@ describe('GetFinancialDashboardUseCase', () => {
   let commissionRepository: CommissionRepositoryMemory;
   let userBarbershopRepository: UserBarbershopRepositoryMemory;
   let workingHoursRepository: WorkingHoursRepositoryMemory;
+  let serviceRepository: ServiceRepositoryMemory;
 
   const BARBERSHOP_ID = 'barbershop-1';
   const BARBER_ID = 'barber-1';
@@ -32,6 +36,11 @@ describe('GetFinancialDashboardUseCase', () => {
     commissionRepository = new CommissionRepositoryMemory();
     userBarbershopRepository = new UserBarbershopRepositoryMemory();
     workingHoursRepository = new WorkingHoursRepositoryMemory();
+    serviceRepository = new ServiceRepositoryMemory();
+
+    await serviceRepository.save(
+      new Service(makeServiceProps({ id: SERVICE_ID, barbershopId: BARBERSHOP_ID })),
+    );
 
     await userBarbershopRepository.save(
       new UserBarbershop({
@@ -100,6 +109,7 @@ describe('GetFinancialDashboardUseCase', () => {
       commissionRepository,
       userBarbershopRepository,
       workingHoursRepository,
+      serviceRepository,
     ).execute(BARBERSHOP_ID);
 
     const a4InThisMonth =
@@ -129,6 +139,7 @@ describe('GetFinancialDashboardUseCase', () => {
       commissionRepository,
       userBarbershopRepository,
       workingHoursRepository,
+      serviceRepository,
     ).execute(BARBERSHOP_ID);
 
     expect(dashboard.commission.weekTotalCents).toBe(750);
@@ -144,6 +155,7 @@ describe('GetFinancialDashboardUseCase', () => {
       commissionRepository,
       userBarbershopRepository,
       workingHoursRepository,
+      serviceRepository,
     ).execute(BARBERSHOP_ID);
 
     const week = dashboard.occupancy.week;

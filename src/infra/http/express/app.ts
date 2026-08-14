@@ -14,7 +14,6 @@ import createAppointmentRoutes from '../routes/appointmentRoutes';
 import createCustomerRoutes from '../routes/customerRoutes';
 import createWorkingHoursRoutes from '../routes/workingHoursRoutes';
 import createUserRoutes from '../routes/userRoutes';
-import createCashRegisterRoutes from '../routes/cashRegisterRoutes';
 import createFinanceRoutes from '../routes/financeRoutes';
 import createEvaluationRoutes from '../routes/evaluationRoutes';
 import healthRoutes from '../routes/healthRoutes';
@@ -79,7 +78,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       const email = String((req.body as Record<string, unknown> | undefined)?.email ?? '')
         .trim()
         .toLowerCase();
-      return `${ipKeyGenerator(req.ip)}|${email}`;
+      return `${ipKeyGenerator(req.ip ?? req.socket.remoteAddress ?? '')}|${email}`;
     },
     handler(_req, res) {
       return res.status(429).json({
@@ -107,9 +106,9 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
     customerRepository,
     auditRepository,
     workingHoursRepository,
-    cashRegisterRepository,
     commissionRepository,
     evaluationRepository,
+    financeEntryRepository,
   } = repositories;
   const hashService = new BcryptHashService();
   const tokenService = new JwtTokenService();
@@ -142,14 +141,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       barbershopRepository,
       userBarbershopRepository,
       customerRepository,
-      cashRegisterRepository,
       commissionRepository,
-      auditService,
-    }),
-    createCashRegisterRoutes({
-      cashRegisterRepository,
-      userBarbershopRepository,
-      barbershopRepository,
       auditService,
     }),
     createFinanceRoutes({
@@ -158,6 +150,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       userBarbershopRepository,
       workingHoursRepository,
       barbershopRepository,
+      financeEntryRepository,
     }),
     createEvaluationRoutes({
       evaluationRepository,

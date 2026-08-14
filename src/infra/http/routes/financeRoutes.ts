@@ -7,11 +7,15 @@ import ICommissionRepository from '@/domain/repository/CommissionRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import IFinanceEntryRepository from '@/domain/repository/FinanceEntryRepository';
+import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
+import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
+import FinanceEntryRepositoryMemory from '@/infra/repositories/inMemory/financeEntry/financeEntryRepositoryMemory';
 
 export interface FinanceRoutesDeps {
   appointmentRepository: IAppointmentRepository;
@@ -19,6 +23,8 @@ export interface FinanceRoutesDeps {
   userBarbershopRepository: IUserBarbershopRepository;
   workingHoursRepository: IWorkingHoursRepository;
   barbershopRepository: IBarbershopRepository;
+  financeEntryRepository: IFinanceEntryRepository;
+  serviceRepository?: IServiceRepository;
 }
 
 export default function createFinanceRoutes(deps?: FinanceRoutesDeps) {
@@ -30,19 +36,37 @@ export default function createFinanceRoutes(deps?: FinanceRoutesDeps) {
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
   const workingHoursRepository = deps?.workingHoursRepository ?? new WorkingHoursRepositoryMemory();
   const barbershopRepository = deps?.barbershopRepository ?? new BarbershopRepositoryMemory();
+  const financeEntryRepository = deps?.financeEntryRepository ?? new FinanceEntryRepositoryMemory();
 
   const controller = new FinancialController(
     appointmentRepository,
     commissionRepository,
     userBarbershopRepository,
     workingHoursRepository,
+    financeEntryRepository,
+    barbershopRepository,
+    deps?.serviceRepository ?? new ServiceRepositoryMemory(),
   );
 
   router.get(
-    '/barbershops/:barbershopId/financial/dashboard',
+    '/barbershops/:barbershopId/finance/dashboard',
     requireAuth,
     requireMembership(userBarbershopRepository, barbershopRepository),
     ExpressAdapter.create(controller.dashboard),
+  );
+
+  router.get(
+    '/barbershops/:barbershopId/finance/entries',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.listEntries),
+  );
+
+  router.post(
+    '/barbershops/:barbershopId/finance/entries',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.addEntry),
   );
 
   return router;

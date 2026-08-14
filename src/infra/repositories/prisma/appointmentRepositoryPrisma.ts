@@ -15,6 +15,7 @@ function toEntity(row: PrismaAppointment): Appointment {
     status: row.status as AppointmentStatus,
     pricePaidCents: row.pricePaidCents,
     paymentMethod: row.paymentMethod as Appointment['paymentMethod'],
+    note: row.note,
   });
 }
 
@@ -87,6 +88,7 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
       status: appointment.status,
       pricePaidCents: appointment.pricePaidCents,
       paymentMethod: appointment.paymentMethod,
+      note: appointment.note,
     };
 
     await this.prisma.appointment.upsert({

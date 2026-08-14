@@ -6,6 +6,7 @@ function toEntity(row: PrismaWorkingHours): WorkingHours {
   return new WorkingHours({
     id: row.id,
     barbershopId: row.barbershopId,
+    barberId: row.barberId,
     dayOfWeek: row.dayOfWeek,
     isOpen: row.isOpen,
     openTime: row.openTime,
@@ -18,7 +19,15 @@ export default class WorkingHoursRepositoryPrisma implements IWorkingHoursReposi
 
   async findAll(barbershopId: string): Promise<WorkingHours[]> {
     const rows = await this.prisma.workingHours.findMany({
-      where: { barbershopId },
+      where: { barbershopId, barberId: null },
+      orderBy: { dayOfWeek: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
+  async findByBarber(barbershopId: string, barberId: string): Promise<WorkingHours[]> {
+    const rows = await this.prisma.workingHours.findMany({
+      where: { barbershopId, barberId },
       orderBy: { dayOfWeek: 'asc' },
     });
     return rows.map(toEntity);
@@ -27,22 +36,45 @@ export default class WorkingHoursRepositoryPrisma implements IWorkingHoursReposi
   async save(workingHours: WorkingHours): Promise<WorkingHours> {
     const data = {
       barbershopId: workingHours.barbershopId,
+      barberId: workingHours.barberId,
       dayOfWeek: workingHours.dayOfWeek,
       isOpen: workingHours.isOpen,
       openTime: workingHours.openTime,
       closeTime: workingHours.closeTime,
     };
 
-    await this.prisma.workingHours.upsert({
-      where: {
-        barbershopId_dayOfWeek: {
-          barbershopId: workingHours.barbershopId,
-          dayOfWeek: workingHours.dayOfWeek,
+    if (workingHours.barberId) {
+      await this.prisma.workingHours.upsert({
+        where: {
+          barbershopId_barberId_dayOfWeek: {
+            barbershopId: workingHours.barbershopId,
+            barberId: workingHours.barberId,
+            dayOfWeek: workingHours.dayOfWeek,
+          },
         },
-      },
-      create: { id: workingHours.id, ...data },
-      update: data,
-    });
+        create: { id: workingHours.id, ...data },
+        update: {
+          isOpen: workingHours.isOpen,
+          openTime: workingHours.openTime,
+          closeTime: workingHours.closeTime,
+        },
+      });
+    } else {
+      await this.prisma.workingHours.upsert({
+        where: {
+          barbershopId_dayOfWeek: {
+            barbershopId: workingHours.barbershopId,
+            dayOfWeek: workingHours.dayOfWeek,
+          },
+        },
+        create: { id: workingHours.id, ...data },
+        update: {
+          isOpen: workingHours.isOpen,
+          openTime: workingHours.openTime,
+          closeTime: workingHours.closeTime,
+        },
+      });
+    }
 
     return workingHours;
   }

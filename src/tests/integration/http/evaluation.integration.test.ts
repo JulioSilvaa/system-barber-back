@@ -52,14 +52,9 @@ describe('Evaluation HTTP Integration', () => {
         serviceId,
         customerName: 'Cliente Avaliação',
         customerPhone: '16988887777',
-        startDate: '2026-08-10T15:00:00.000Z',
+        startDate: '2026-08-20T15:00:00.000Z',
       });
     const appointmentId = (appointment.body as { id: string }).id;
-
-    await request(app)
-      .post(`/api/barbershops/${barbershop.id}/cash-register/open`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({});
 
     const completed = await request(app)
       .patch(`/api/barbershops/${barbershop.id}/appointments/${appointmentId}/complete`)

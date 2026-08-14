@@ -2,19 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Appointment, AppointmentPaymentMethod } from '@/domain/entities/Appointment';
-import { Commission, CashRegisterMovement } from '@/domain/entities';
+import { Commission } from '@/domain/entities';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
-import ICashRegisterRepository from '@/domain/repository/CashRegisterRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
-import { AppError } from '@/domain/errors';
 
 export type CompleteAppointmentInputDTO = {
   appointmentId: string;
   barbershopId: string;
   paidPriceCents?: number | null;
   paymentMethod?: AppointmentPaymentMethod | null;
+  note?: string | null;
 };
 
 export default class CompleteAppointmentUseCase {
@@ -22,7 +21,6 @@ export default class CompleteAppointmentUseCase {
     private readonly appointmentRepository: IAppointmentRepository,
     private readonly serviceRepository: IServiceRepository,
     private readonly userBarbershopRepository: IUserBarbershopRepository,
-    private readonly cashRegisterRepository: ICashRegisterRepository,
     private readonly commissionRepository: ICommissionRepository,
     private readonly auditService?: AuditService,
   ) {}
@@ -36,12 +34,8 @@ export default class CompleteAppointmentUseCase {
       throw new Error('Agendamento não encontrado');
     }
 
-    const cashRegister = await this.cashRegisterRepository.findOpenByBarbershop(input.barbershopId);
-    if (!cashRegister) {
-      throw new AppError(
-        'Para concluir um atendimento é preciso abrir o caixa do dia.',
-        'CASH_REGISTER_REQUIRED',
-      );
+    if (appointment.status === 'CANCELLED') {
+      throw new Error('appointment canceled');
     }
 
     const paidPriceCents = input.paidPriceCents ?? (await this.servicePrice(appointment)) ?? 0;
@@ -52,22 +46,11 @@ export default class CompleteAppointmentUseCase {
       status: appointment.status,
       pricePaidCents: appointment.pricePaidCents,
       paymentMethod: appointment.paymentMethod,
+      note: appointment.note,
     };
-    appointment.complete({ pricePaidCents: paidPriceCents, paymentMethod });
+    appointment.complete({ pricePaidCents: paidPriceCents, paymentMethod, note: input.note });
 
     const commission = await this.createCommission(appointment, paidPriceCents);
-
-    const entryMovement = new CashRegisterMovement({
-      id: randomUUID(),
-      cashRegisterId: cashRegister.id,
-      barbershopId: input.barbershopId,
-      kind: 'ENTRY',
-      category: paymentMethod,
-      amountCents: paidPriceCents,
-      description: 'Pagamento de atendimento',
-      appointmentId: appointment.id,
-    });
-    await this.cashRegisterRepository.saveMovement(entryMovement);
 
     const saved = await this.appointmentRepository.update(appointment);
 
@@ -83,8 +66,8 @@ export default class CompleteAppointmentUseCase {
         status: saved.status,
         pricePaidCents: saved.pricePaidCents,
         paymentMethod: saved.paymentMethod,
+        note: saved.note,
         commissionCents: commission?.commissionCents ?? 0,
-        cashRegisterId: cashRegister.id,
       },
     });
 

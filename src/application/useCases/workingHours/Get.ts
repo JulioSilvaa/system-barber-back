@@ -4,7 +4,14 @@ import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursReposit
 export default class GetWorkingHoursUseCase {
   constructor(private readonly workingHoursRepository: IWorkingHoursRepository) {}
 
-  async execute(barbershopId: string): Promise<WorkingHours[]> {
+  async execute(barbershopId: string, barberId?: string | null): Promise<WorkingHours[]> {
+    if (barberId) {
+      const barberHours = await this.workingHoursRepository.findByBarber(barbershopId, barberId);
+      if (barberHours.length > 0) {
+        return barberHours;
+      }
+    }
+
     const hours = await this.workingHoursRepository.findAll(barbershopId);
 
     if (hours.length > 0) {
@@ -15,6 +22,7 @@ export default class GetWorkingHoursUseCase {
       return new WorkingHours({
         id: `default-${day.dayOfWeek}-${barbershopId}`,
         barbershopId,
+        barberId: barberId ?? null,
         dayOfWeek: day.dayOfWeek,
         isOpen: day.isOpen,
         openTime: day.openTime,

@@ -6,14 +6,13 @@ import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListD
 import { Appointment } from '@/domain/entities/Appointment';
 import { Service } from '@/domain/entities/Service';
 import { Barbershop } from '@/domain/entities/Barbershop';
-import { UserBarbershop, CashRegister } from '@/domain/entities';
+import { UserBarbershop } from '@/domain/entities';
 import { makeAppointmentProps } from '@/tests/helpers/factories';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
-import CashRegisterRepositoryMemory from '@/infra/repositories/inMemory/cashRegister/cashRegisterRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 
 describe('Appointment Use Cases Unit Tests', () => {
@@ -22,7 +21,6 @@ describe('Appointment Use Cases Unit Tests', () => {
   let barbershopRepository: BarbershopRepositoryMemory;
   let userBarbershopRepository: UserBarbershopRepositoryMemory;
   let customerRepository: CustomerRepositoryMemory;
-  let cashRegisterRepository: CashRegisterRepositoryMemory;
   let commissionRepository: CommissionRepositoryMemory;
 
   const BARBERSHOP_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -35,7 +33,7 @@ describe('Appointment Use Cases Unit Tests', () => {
     serviceId: SERVICE_ID,
     customerName: 'Maria Souza',
     customerPhone: '16988888888',
-    startDate: new Date('2026-08-10T14:00:00.000Z'),
+    startDate: new Date('2026-08-20T14:00:00.000Z'),
   };
 
   const makeCreateUseCase = () =>
@@ -53,7 +51,6 @@ describe('Appointment Use Cases Unit Tests', () => {
     barbershopRepository = new BarbershopRepositoryMemory();
     userBarbershopRepository = new UserBarbershopRepositoryMemory();
     customerRepository = new CustomerRepositoryMemory();
-    cashRegisterRepository = new CashRegisterRepositoryMemory();
     commissionRepository = new CommissionRepositoryMemory();
 
     await barbershopRepository.save(
@@ -99,7 +96,7 @@ describe('Appointment Use Cases Unit Tests', () => {
           customerId: expect.any(String),
           status: 'SCHEDULED',
           startDate: inputMock.startDate,
-          endDate: new Date('2026-08-10T14:30:00.000Z'),
+          endDate: new Date('2026-08-20T14:30:00.000Z'),
         }),
       );
     });
@@ -121,7 +118,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       const first = await makeCreateUseCase().execute(inputMock);
       const second = await makeCreateUseCase().execute({
         ...inputMock,
-        startDate: new Date('2026-08-10T15:00:00.000Z'),
+        startDate: new Date('2026-08-20T15:00:00.000Z'),
       });
 
       expect(second.customerId).toBe(first.customerId);
@@ -152,7 +149,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       await expect(
         makeCreateUseCase().execute({
           ...inputMock,
-          startDate: new Date('2026-08-10T14:15:00.000Z'),
+          startDate: new Date('2026-08-20T14:15:00.000Z'),
         }),
       ).rejects.toThrow('Já existe um agendamento neste horário');
     });
@@ -164,20 +161,10 @@ describe('Appointment Use Cases Unit Tests', () => {
         appointmentRepository,
         serviceRepository,
         userBarbershopRepository,
-        cashRegisterRepository,
         commissionRepository,
       );
 
-    const openRegister = () =>
-      cashRegisterRepository.save(
-        new CashRegister({
-          id: 'cash-register-1',
-          barbershopId: BARBERSHOP_ID,
-          openedKey: '2026-08-10',
-        }),
-      );
-
-    it('deve lançar erro com CASH_REGISTER_REQUIRED quando não há caixa aberto', async () => {
+    it('deve concluir um agendamento salvando a nota informada', async () => {
       await appointmentRepository.save(
         new Appointment(
           makeAppointmentProps({
@@ -189,12 +176,20 @@ describe('Appointment Use Cases Unit Tests', () => {
         ),
       );
 
-      await expect(
-        makeCompleteUseCase().execute({
-          appointmentId: 'appointment-1',
-          barbershopId: BARBERSHOP_ID,
-        }),
-      ).rejects.toMatchObject({ code: 'CASH_REGISTER_REQUIRED' });
+      const input: Parameters<CompleteAppointmentUseCase['execute']>[0] = {
+        appointmentId: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        paidPriceCents: 5800,
+        paymentMethod: 'PIX',
+        note: 'Corte + pomada',
+      };
+
+      const output = await makeCompleteUseCase().execute(input);
+
+      expect(output.status).toBe('COMPLETED');
+      expect(output.pricePaidCents).toBe(5800);
+      expect(output.paymentMethod).toBe('PIX');
+      expect(output.note).toBe('Corte + pomada');
     });
 
     it('deve concluir um agendamento cobrando o valor informado', async () => {
@@ -208,7 +203,6 @@ describe('Appointment Use Cases Unit Tests', () => {
           }),
         ),
       );
-      await openRegister();
 
       const output = await makeCompleteUseCase().execute({
         appointmentId: 'appointment-1',
@@ -222,7 +216,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       expect(output.paymentMethod).toBe('PIX');
     });
 
-    it('deve usar o preço do serviço quando o valor não é informado', async () => {
+    it('deve usar o preço do serviço e método CASH quando nada é informado', async () => {
       await appointmentRepository.save(
         new Appointment(
           makeAppointmentProps({
@@ -233,7 +227,6 @@ describe('Appointment Use Cases Unit Tests', () => {
           }),
         ),
       );
-      await openRegister();
 
       const output = await makeCompleteUseCase().execute({
         appointmentId: 'appointment-1',
@@ -244,7 +237,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       expect(output.paymentMethod).toBe('CASH');
     });
 
-    it('deve registrar entrada no caixa e gerar comissão do barbeiro', async () => {
+    it('deve gerar comissão do barbeiro', async () => {
       await appointmentRepository.save(
         new Appointment(
           makeAppointmentProps({
@@ -261,7 +254,6 @@ describe('Appointment Use Cases Unit Tests', () => {
       );
       membership?.setCommissionRate(10);
       if (membership) await userBarbershopRepository.save(membership);
-      await openRegister();
 
       const output = await makeCompleteUseCase().execute({
         appointmentId: 'appointment-1',
@@ -270,18 +262,12 @@ describe('Appointment Use Cases Unit Tests', () => {
         paymentMethod: 'CASH',
       });
 
-      const register = await cashRegisterRepository.findOpenByBarbershop(BARBERSHOP_ID);
-      const movements = register ? await cashRegisterRepository.listMovements(register.id) : [];
-      expect(movements).toHaveLength(1);
-      expect(movements[0]).toMatchObject({
-        kind: 'ENTRY',
-        category: 'CASH',
-        amountCents: 5000,
+      const commission = await commissionRepository.findByAppointment('appointment-1');
+      expect(commission).toMatchObject({
+        commissionCents: 500,
+        rate: 10,
         appointmentId: output.id,
       });
-
-      const commission = await commissionRepository.findByAppointment('appointment-1');
-      expect(commission).toMatchObject({ commissionCents: 500, rate: 10 });
     });
 
     it('deve lançar erro quando o agendamento não existe', async () => {
@@ -307,7 +293,6 @@ describe('Appointment Use Cases Unit Tests', () => {
           }),
         ),
       );
-      await openRegister();
 
       const useCase = makeCompleteUseCase();
 
@@ -369,8 +354,8 @@ describe('Appointment Use Cases Unit Tests', () => {
             barbershopId: BARBERSHOP_ID,
             barberId: BARBER_ID,
             serviceId: SERVICE_ID,
-            startDate: new Date('2026-08-10T14:00:00.000Z'),
-            endDate: new Date('2026-08-10T14:30:00.000Z'),
+            startDate: new Date('2026-08-20T14:00:00.000Z'),
+            endDate: new Date('2026-08-20T14:30:00.000Z'),
           }),
         ),
       );
@@ -381,13 +366,13 @@ describe('Appointment Use Cases Unit Tests', () => {
             barbershopId: BARBERSHOP_ID,
             barberId: BARBER_ID,
             serviceId: SERVICE_ID,
-            startDate: new Date('2026-08-11T14:00:00.000Z'),
-            endDate: new Date('2026-08-11T14:30:00.000Z'),
+            startDate: new Date('2026-08-21T14:00:00.000Z'),
+            endDate: new Date('2026-08-21T14:30:00.000Z'),
           }),
         ),
       );
 
-      const appointments = await useCase.execute(BARBERSHOP_ID, new Date(2026, 7, 10));
+      const appointments = await useCase.execute(BARBERSHOP_ID, new Date(2026, 7, 20));
 
       expect(appointments).toHaveLength(1);
       expect(appointments[0].id).toBe('appointment-1');
