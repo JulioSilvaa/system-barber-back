@@ -142,6 +142,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       userBarbershopRepository,
       customerRepository,
       commissionRepository,
+      workingHoursRepository,
       auditService,
     }),
     createFinanceRoutes({

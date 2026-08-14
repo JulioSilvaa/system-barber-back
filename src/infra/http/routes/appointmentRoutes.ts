@@ -13,6 +13,7 @@ import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository'
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
+import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
@@ -20,6 +21,7 @@ import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
+import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 
 export interface AppointmentRoutesDeps {
   appointmentRepository: IAppointmentRepository;
@@ -28,6 +30,7 @@ export interface AppointmentRoutesDeps {
   userBarbershopRepository: IUserBarbershopRepository;
   customerRepository: ICustomerRepository;
   commissionRepository?: ICommissionRepository;
+  workingHoursRepository?: IWorkingHoursRepository;
   auditService: AuditService;
 }
 
@@ -41,6 +44,7 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
   const customerRepository = deps?.customerRepository ?? new CustomerRepositoryMemory();
   const commissionRepository = deps?.commissionRepository ?? new CommissionRepositoryMemory();
+  const workingHoursRepository = deps?.workingHoursRepository ?? new WorkingHoursRepositoryMemory();
   const auditService = deps?.auditService ?? new AuditService(new AuditRepositoryMemory());
 
   const controller = new AppointmentController(
@@ -51,6 +55,7 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
     customerRepository,
     auditService,
     commissionRepository,
+    workingHoursRepository,
   );
 
   router.post(
@@ -62,6 +67,11 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
     '/barbershops/:identifier/appointments/busy',
     resolveBarbershop(barbershopRepository),
     ExpressAdapter.create(controller.listBusy),
+  );
+  router.get(
+    '/barbershops/:identifier/appointments/slots',
+    resolveBarbershop(barbershopRepository),
+    ExpressAdapter.create(controller.getSlots),
   );
   router.get(
     '/barbershops/:barbershopId/appointments',

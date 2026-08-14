@@ -4,6 +4,7 @@ import AuditService from '@/application/services/AuditService';
 import CreateAppointmentUseCase from '@/application/useCases/appointment/Create';
 import CompleteAppointmentUseCase from '@/application/useCases/appointment/Complete';
 import CancelAppointmentUseCase from '@/application/useCases/appointment/Cancel';
+import GetAvailableSlotsUseCase from '@/application/useCases/appointment/GetAvailableSlots';
 import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListDay';
 import { Appointment } from '@/domain/entities/Appointment';
 import { Service } from '@/domain/entities/Service';
@@ -13,6 +14,7 @@ import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository'
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import ICommissionRepository from '@/domain/repository/CommissionRepository';
+import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
 import { emitToBarbershop, emitDataChanged } from '@/infra/websocket/socketServer';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
@@ -22,6 +24,7 @@ import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/
 import CustomerRepositoryMemory from '@/infra/repositories/inMemory/customer/customerRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
+import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 
 type AppointmentOutputDTO = {
   id: string;
@@ -47,6 +50,7 @@ export default class AppointmentController {
   private readonly completeAppointmentUseCase: CompleteAppointmentUseCase;
   private readonly cancelAppointmentUseCase: CancelAppointmentUseCase;
   private readonly listDayAppointmentsUseCase: ListDayAppointmentsUseCase;
+  private readonly getAvailableSlotsUseCase: GetAvailableSlotsUseCase;
   private readonly customerRepository: ICustomerRepository;
   private readonly serviceRepository: IServiceRepository;
 
@@ -58,6 +62,7 @@ export default class AppointmentController {
     customerRepository: ICustomerRepository = new CustomerRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
     commissionRepository: ICommissionRepository = new CommissionRepositoryMemory(),
+    workingHoursRepository: IWorkingHoursRepository = new WorkingHoursRepositoryMemory(),
   ) {
     this.createAppointmentUseCase = new CreateAppointmentUseCase(
       appointmentRepository,
@@ -79,6 +84,11 @@ export default class AppointmentController {
       auditService,
     );
     this.listDayAppointmentsUseCase = new ListDayAppointmentsUseCase(appointmentRepository);
+    this.getAvailableSlotsUseCase = new GetAvailableSlotsUseCase(
+      appointmentRepository,
+      serviceRepository,
+      workingHoursRepository,
+    );
     this.customerRepository = customerRepository;
     this.serviceRepository = serviceRepository;
   }
@@ -144,6 +154,28 @@ export default class AppointmentController {
         }));
 
       return res.status(200).json(busy);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getSlots = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const date = parseDateQuery(req.query.date);
+      const rawBarbershopId = req.params.identifier ?? req.params.barbershopId;
+      const barbershopId =
+        req.barbershopId ?? (Array.isArray(rawBarbershopId) ? rawBarbershopId[0] : rawBarbershopId);
+      const barberId = req.query.barberId ? String(req.query.barberId) : null;
+      const serviceId = req.query.serviceId ? String(req.query.serviceId) : '';
+
+      const slots = await this.getAvailableSlotsUseCase.execute({
+        barbershopId,
+        date,
+        serviceId,
+        barberId,
+      });
+
+      return res.status(200).json(slots);
     } catch (error) {
       next(error);
     }
