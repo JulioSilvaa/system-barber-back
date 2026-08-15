@@ -1,13 +1,9 @@
 import IUserRepository from '@/domain/repository/UserRepository';
 
 export default class ListUserUseCase {
-  private readonly _userRepository: IUserRepository;
-  constructor(private userRepository: IUserRepository) {
-    this._userRepository = userRepository;
-  }
+  constructor(private readonly userRepository: IUserRepository) {}
 
   async execute() {
-    const users = await this._userRepository.list();
-    return users;
+    return this.userRepository.list();
   }
 }

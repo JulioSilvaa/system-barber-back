@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import ListMembershipsUseCase from '@/application/useCases/membership/List';
 import SwitchBarbershopUseCase from '@/application/useCases/membership/Switch';
-import OnboardUserUseCase from '@/application/useCases/membership/Onboard';
 import AddBarberToBarbershopUseCase from '@/application/useCases/membership/AddBarber';
 import ListBarbershopMembershipsUseCase from '@/application/useCases/membership/ListByBarbershop';
 import UpdateBarberStatusUseCase from '@/application/useCases/membership/UpdateBarberStatus';
@@ -27,7 +26,6 @@ describe('Membership Use Cases Unit Tests', () => {
 
   let listUseCase: ListMembershipsUseCase;
   let switchUseCase: SwitchBarbershopUseCase;
-  let onboardUseCase: OnboardUserUseCase;
   let addBarberUseCase: AddBarberToBarbershopUseCase;
   let listByBarbershopUseCase: ListBarbershopMembershipsUseCase;
   let updateBarberStatusUseCase: UpdateBarberStatusUseCase;
@@ -52,7 +50,6 @@ describe('Membership Use Cases Unit Tests', () => {
 
     listUseCase = new ListMembershipsUseCase(userBarbershopRepository);
     switchUseCase = new SwitchBarbershopUseCase(userBarbershopRepository);
-    onboardUseCase = new OnboardUserUseCase(userBarbershopRepository);
     addBarberUseCase = new AddBarberToBarbershopUseCase(
       userBarbershopRepository,
       userRepository,
@@ -119,31 +116,6 @@ describe('Membership Use Cases Unit Tests', () => {
 
       await expect(switchUseCase.execute('user-1', barbershop2.id)).rejects.toThrow(
         'Vínculo não encontrado',
-      );
-    });
-  });
-
-  describe('OnboardUserUseCase', () => {
-    it('deve criar um vínculo ativo entre usuário e barbearia', async () => {
-      const output = await onboardUseCase.execute('user-1', barbershop1.id);
-
-      expect(output.userId).toBe('user-1');
-      expect(output.barbershopId).toBe(barbershop1.id);
-      expect(output.status).toBe('ACTIVE');
-      expect(output.localRole).toBe('BARBER');
-
-      const saved = await userBarbershopRepository.findByUserAndBarbershop(
-        'user-1',
-        barbershop1.id,
-      );
-      expect(saved).toBeTruthy();
-    });
-
-    it('deve lançar erro quando o vínculo já existe', async () => {
-      await userBarbershopRepository.save(new UserBarbershop(makeUserBarbershopProps()));
-
-      await expect(onboardUseCase.execute('user-1', barbershop1.id)).rejects.toThrow(
-        'Vínculo já existente',
       );
     });
   });

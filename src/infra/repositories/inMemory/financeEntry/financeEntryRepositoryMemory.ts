@@ -36,10 +36,4 @@ export default class FinanceEntryRepositoryMemory implements IFinanceEntryReposi
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
-
-  async findById(id: string, barbershopId: string): Promise<FinanceEntry | null> {
-    return (
-      this.entries.find(entry => entry.id === id && entry.barbershopId === barbershopId) ?? null
-    );
-  }
 }

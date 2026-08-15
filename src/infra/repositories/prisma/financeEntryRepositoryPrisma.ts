@@ -66,11 +66,4 @@ export default class FinanceEntryRepositoryPrisma implements IFinanceEntryReposi
     });
     return rows.map(toEntity);
   }
-
-  async findById(id: string, barbershopId: string): Promise<FinanceEntry | null> {
-    const row = await this.prisma.financeEntry.findFirst({
-      where: { id, barbershopId },
-    });
-    return row ? toEntity(row) : null;
-  }
 }

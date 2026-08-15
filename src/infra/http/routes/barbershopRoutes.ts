@@ -58,8 +58,6 @@ export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDe
     resolveBarbershop(barbershopRepository),
     ExpressAdapter.create(controller.getPublic),
   );
-  router.get('/barbershops/me', requireAuth, ExpressAdapter.create(controller.me));
-  router.post('/barbershops/logout', ExpressAdapter.create(controller.logout));
   router.patch(
     '/barbershops/:id/status',
     requireAuth,

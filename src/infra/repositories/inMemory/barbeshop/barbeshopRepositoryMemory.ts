@@ -19,10 +19,6 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
     return barbershop;
   }
 
-  async create(barbershop: Barbershop): Promise<void> {
-    this.barbershops.push(barbershop);
-  }
-
   async findById(id: string): Promise<Barbershop | null> {
     return this.barbershops.find(barbershop => barbershop.id === id) ?? null;
   }

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateUserUseCase from '@/application/useCases/user/Create';
 import DeleteUserUseCase from '@/application/useCases/user/Delete';
-import FindUserByIdUseCase from '@/application/useCases/user/Find';
 import ListUserUseCase from '@/application/useCases/user/List';
 import { CreateUserInputDTO } from '@/application/dtos/UserDto';
 import IdGeneratorRepository from '@/domain/repository/IdGeneratorRepository';
@@ -16,7 +15,6 @@ describe('User Use Cases Unit Tests', () => {
 
   let createUseCase: CreateUserUseCase;
   let deleteUseCase: DeleteUserUseCase;
-  let findByIdUseCase: FindUserByIdUseCase;
   let listUserUseCase: ListUserUseCase;
 
   const inputMock: CreateUserInputDTO = {
@@ -34,7 +32,6 @@ describe('User Use Cases Unit Tests', () => {
 
     createUseCase = new CreateUserUseCase(userRepository, mockIdGenerator);
     deleteUseCase = new DeleteUserUseCase(userRepository);
-    findByIdUseCase = new FindUserByIdUseCase(userRepository);
     listUserUseCase = new ListUserUseCase(userRepository);
   });
 
@@ -62,28 +59,6 @@ describe('User Use Cases Unit Tests', () => {
       await createUseCase.execute(inputMock);
 
       await expect(createUseCase.execute(inputMock)).rejects.toThrow('Email já cadastrado');
-    });
-  });
-
-  describe('FindUserByIdUseCase', () => {
-    it('deve retornar um usuário existente pelo ID', async () => {
-      await createUseCase.execute(inputMock);
-
-      const output = await findByIdUseCase.execute(VALID_USER_ID);
-
-      expect(output).toEqual({
-        id: VALID_USER_ID,
-        name: inputMock.name,
-        email: inputMock.email,
-        phone: inputMock.phone,
-        isActive: true,
-      });
-    });
-
-    it('deve retornar null ao buscar um usuário inexistente', async () => {
-      const output = await findByIdUseCase.execute(NON_EXISTENT_ID);
-
-      expect(output).toBeNull();
     });
   });
 

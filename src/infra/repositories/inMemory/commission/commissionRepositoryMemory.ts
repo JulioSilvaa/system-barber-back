@@ -20,12 +20,6 @@ export default class CommissionRepositoryMemory implements ICommissionRepository
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async findByBarber(barberId: string, barbershopId: string): Promise<Commission[]> {
-    return this.commissions.filter(
-      commission => commission.barberId === barberId && commission.barbershopId === barbershopId,
-    );
-  }
-
   async findByAppointment(appointmentId: string): Promise<Commission | null> {
     return this.commissions.find(commission => commission.appointmentId === appointmentId) ?? null;
   }
