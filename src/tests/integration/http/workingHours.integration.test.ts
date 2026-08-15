@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 
 function daysPayload(open = '09:00', close = '18:00') {
   return Array.from({ length: 7 }, (_, dayOfWeek) => ({
@@ -35,7 +36,7 @@ describe('Working Hours HTTP Integration', () => {
     const login = await request(app)
       .post('/api/barbershops/login')
       .send({ email: `${unique}@example.com`, password: 'SenhaForte1' });
-    const token = login.body.accessToken as string;
+    const token = getAccessToken(login);
 
     async function createBarber(name: string) {
       const res = await request(app)

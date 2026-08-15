@@ -54,13 +54,19 @@ describe('Admin HTTP Integration', () => {
         .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 
       expect(response.status).toBe(200);
+      expect(response.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('sb_access_token='),
+          expect.stringContaining('sb_refresh_token='),
+        ]),
+      );
       expect(response.body).toEqual(
         expect.objectContaining({
-          accessToken: expect.any(String),
-          refreshToken: expect.any(String),
           admin: expect.objectContaining({ id: ADMIN_ID, email: ADMIN_EMAIL }),
         }),
       );
+      expect(response.body.accessToken).toBeUndefined();
+      expect(response.body.refreshToken).toBeUndefined();
     });
 
     it('deve retornar 401 com senha incorreta', async () => {

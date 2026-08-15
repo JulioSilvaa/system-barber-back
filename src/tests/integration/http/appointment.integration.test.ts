@@ -2,6 +2,7 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 
 describe('Appointment HTTP Integration', () => {
   beforeEach(() => {
@@ -32,7 +33,7 @@ describe('Appointment HTTP Integration', () => {
 
     return {
       id,
-      token: login.body.accessToken as string,
+      token: getAccessToken(login),
     };
   }
 

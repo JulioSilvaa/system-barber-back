@@ -2,6 +2,7 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Service HTTP Integration', () => {
@@ -35,7 +36,7 @@ describe('Service HTTP Integration', () => {
 
     return {
       id,
-      token: login.body.accessToken as string,
+      token: getAccessToken(login),
     };
   }
 

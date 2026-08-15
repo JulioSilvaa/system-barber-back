@@ -10,6 +10,7 @@ import IAdminRepository from '@/domain/repository/AdminRepository';
 import HashRepository from '@/domain/repository/HashRepository';
 import { ITokenService } from '@/domain/repository/TokenService';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
+import { setAuthCookies } from '@/infra/http/helpers/authCookie';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
@@ -56,7 +57,9 @@ export default class AdminController {
         password: req.body.password,
       });
 
-      return res.status(200).json(output);
+      setAuthCookies(res, output.accessToken, output.refreshToken);
+
+      return res.status(200).json({ admin: output.admin });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Admin não encontrado' || error.message === 'Admin inativo') {

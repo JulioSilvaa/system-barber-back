@@ -3,6 +3,7 @@ import path from 'node:path';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import { UPLOADS_DIR } from '@/infra/http/helpers/logoUpload';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
@@ -33,7 +34,7 @@ describe('Barbershop Branding HTTP Integration', () => {
 
     expect(login.status).toBe(200);
 
-    return { barbershop, barbershopToken: login.body.accessToken as string };
+    return { barbershop, barbershopToken: getAccessToken(login) };
   }
 
   describe('PATCH /api/barbershops/:id/branding', () => {
@@ -92,6 +93,50 @@ describe('Barbershop Branding HTTP Integration', () => {
         .send({ name: '   ' });
 
       expect(response.status).toBe(400);
+    });
+
+    it('deve rejeitar primaryColor inválido', async () => {
+      const app = createApp();
+      const { barbershop, barbershopToken } = await createBarbershop(app);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/branding`)
+        .set('Authorization', `Bearer ${barbershopToken}`)
+        .send({ primaryColor: 'red' });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('deve rejeitar logoUrl fora de /uploads/', async () => {
+      const app = createApp();
+      const { barbershop, barbershopToken } = await createBarbershop(app);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/branding`)
+        .set('Authorization', `Bearer ${barbershopToken}`)
+        .send({ logoUrl: 'https://evil.example.com/logo.png' });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('deve aceitar logoUrl vazio e /uploads/', async () => {
+      const app = createApp();
+      const { barbershop, barbershopToken } = await createBarbershop(app);
+
+      const empty = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/branding`)
+        .set('Authorization', `Bearer ${barbershopToken}`)
+        .send({ logoUrl: '' });
+
+      expect(empty.status).toBe(200);
+
+      const uploaded = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/branding`)
+        .set('Authorization', `Bearer ${barbershopToken}`)
+        .send({ logoUrl: `/uploads/logo-${barbershop.id}.png` });
+
+      expect(uploaded.status).toBe(200);
+      expect(uploaded.body.logoUrl).toBe(`/uploads/logo-${barbershop.id}.png`);
     });
 
     it('deve expor os campos de branding na rota pública', async () => {

@@ -178,6 +178,9 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
     }
 
     if (err instanceof Error) {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ message: 'Erro interno do servidor' });
+      }
       return res.status(400).json({ message: err.message });
     }
 

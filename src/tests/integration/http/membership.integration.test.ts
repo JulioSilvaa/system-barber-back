@@ -2,6 +2,7 @@ import type { Application } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Membership HTTP Integration', () => {
@@ -38,7 +39,7 @@ describe('Membership HTTP Integration', () => {
       .send({ email: `${slug}@example.com`, password: 'SenhaForte1' });
 
     expect(response.status).toBe(200);
-    return response.body.accessToken as string;
+    return getAccessToken(response);
   }
 
   describe('Fluxo completo: barbearia cria barbeiro e vincula', () => {

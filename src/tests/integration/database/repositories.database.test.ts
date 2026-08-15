@@ -13,6 +13,7 @@ import { createPrismaClient } from '@/infra/database/prisma';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import { createApp } from '@/infra/http/express/app';
 import { createPrismaRepositorySet, RepositorySet } from '@/infra/repositories/factory';
+import { getAccessToken } from '@/tests/helpers/auth';
 import { TEST_DATABASE_URL } from '@/tests/database/globalSetup';
 import type { PrismaClient } from '@/generated/prisma/client';
 
@@ -462,7 +463,7 @@ describe('Database Integration (PostgreSQL)', () => {
         .send({ email: 'barbearia-flow@example.com', password: 'SenhaForte1' });
 
       expect(login.status).toBe(200);
-      const token = login.body.accessToken as string;
+      const token = getAccessToken(login);
 
       const createBarber = await request(app)
         .post('/api/users')

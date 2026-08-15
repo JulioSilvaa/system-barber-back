@@ -15,11 +15,18 @@ export default class JwtTokenService implements ITokenService {
     });
   }
 
-  verify(token: string): TokenPayload {
-    if (!process.env.JWT_ACCESS_SECRET) {
-      throw new Error('JWT_ACCESS_SECRET is not defined');
+  verify(token: string, type: 'access' | 'refresh' = 'access'): TokenPayload {
+    const secret =
+      type === 'refresh' ? process.env.JWT_REFRESH_SECRET : process.env.JWT_ACCESS_SECRET;
+
+    if (!secret) {
+      throw new Error(
+        type === 'refresh'
+          ? 'JWT_REFRESH_SECRET is not defined'
+          : 'JWT_ACCESS_SECRET is not defined',
+      );
     }
 
-    return jwt.verify(token, process.env.JWT_ACCESS_SECRET) as TokenPayload;
+    return jwt.verify(token, secret) as TokenPayload;
   }
 }

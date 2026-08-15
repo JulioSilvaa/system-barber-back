@@ -1,7 +1,16 @@
+import 'dotenv/config';
 import { execSync } from 'node:child_process';
 import { Client } from 'pg';
 
-const DEFAULT_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/systembarber';
+function requireDatabaseUrl(): string {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      'DATABASE_URL não definida. Configure a variável de ambiente para rodar os testes.',
+    );
+  }
+  return databaseUrl;
+}
 
 function buildTestDatabaseUrl(databaseUrl: string): string {
   const url = new URL(databaseUrl);
@@ -10,12 +19,10 @@ function buildTestDatabaseUrl(databaseUrl: string): string {
   return url.toString();
 }
 
-export const TEST_DATABASE_URL = buildTestDatabaseUrl(
-  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
-);
+export const TEST_DATABASE_URL = buildTestDatabaseUrl(requireDatabaseUrl());
 
 export default async function globalSetup() {
-  const adminUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+  const adminUrl = requireDatabaseUrl();
   const client = new Client({ connectionString: adminUrl });
   await client.connect();
 

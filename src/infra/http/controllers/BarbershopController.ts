@@ -119,7 +119,7 @@ export default class BarbershopController {
 
       setAuthCookies(res, output.accessToken, output.refreshToken);
 
-      return res.status(200).json(output);
+      return res.status(200).json({ barbershop: output.barbershop });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Barbearia não encontrada' || error.message === 'Barbearia inativa') {
@@ -212,8 +212,21 @@ export default class BarbershopController {
       if (primaryColor !== undefined && typeof primaryColor !== 'string') {
         throw new Error('primaryColor must be a string');
       }
+      if (
+        primaryColor !== undefined &&
+        !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(primaryColor)
+      ) {
+        throw new Error('primaryColor must be a valid HEX color');
+      }
       if (logoUrl !== undefined && typeof logoUrl !== 'string') {
         throw new Error('logoUrl must be a string');
+      }
+      if (
+        logoUrl !== undefined &&
+        logoUrl !== '' &&
+        !/^\/uploads\/[a-zA-Z0-9_.-]+$/.test(logoUrl)
+      ) {
+        throw new Error('logoUrl must point to an uploaded file');
       }
 
       const barbershop = await this.updateBrandingUseCase.execute(

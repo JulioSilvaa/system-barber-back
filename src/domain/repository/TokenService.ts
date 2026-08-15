@@ -11,5 +11,5 @@ export type TokenPayload = {
 
 export interface ITokenService {
   sign(payload: Omit<TokenPayload, 'iat' | 'exp'>, expiresIn: string): string;
-  verify(token: string): TokenPayload;
+  verify(token: string, type?: 'access' | 'refresh'): TokenPayload;
 }

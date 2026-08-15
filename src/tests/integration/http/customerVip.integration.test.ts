@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Customer VIP HTTP Integration', () => {
@@ -29,7 +30,7 @@ describe('Customer VIP HTTP Integration', () => {
       .send({ email: 'contato@barbeariacentral.com', password: 'SenhaForte1' });
 
     expect(login.status).toBe(200);
-    const barbershopToken = login.body.accessToken as string;
+    const barbershopToken = getAccessToken(login);
 
     const customer = await request(app)
       .post(`/api/barbershops/${barbershopId}/customers`)

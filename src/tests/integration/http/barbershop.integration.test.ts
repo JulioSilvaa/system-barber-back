@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Application } from 'express';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Barbershop HTTP Integration', () => {
@@ -108,7 +109,7 @@ describe('Barbershop HTTP Integration', () => {
         .post('/api/barbershops/login')
         .send({ email: barbershopPayload.email, password: barbershopPayload.password });
       expect(login.status).toBe(200);
-      const barbershopToken = login.body.accessToken as string;
+      const barbershopToken = getAccessToken(login);
 
       const barber = await request(app)
         .post('/api/users')
@@ -160,7 +161,7 @@ describe('Barbershop HTTP Integration', () => {
         .post('/api/barbershops/login')
         .send({ email: barbershopPayload.email, password: barbershopPayload.password });
       expect(login.status).toBe(200);
-      const barbershopToken = login.body.accessToken as string;
+      const barbershopToken = getAccessToken(login);
 
       const barber = await request(app)
         .post('/api/users')
@@ -233,16 +234,22 @@ describe('Barbershop HTTP Integration', () => {
         .send({ email: 'contato@barbeariacentral.com', password: 'SenhaForte1' });
 
       expect(response.status).toBe(200);
+      expect(response.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('sb_access_token='),
+          expect.stringContaining('sb_refresh_token='),
+        ]),
+      );
       expect(response.body).toEqual(
         expect.objectContaining({
-          accessToken: expect.any(String),
-          refreshToken: expect.any(String),
           barbershop: expect.objectContaining({
             id: expect.any(String),
             email: 'contato@barbeariacentral.com',
           }),
         }),
       );
+      expect(response.body.accessToken).toBeUndefined();
+      expect(response.body.refreshToken).toBeUndefined();
     });
 
     it('deve retornar 401 quando a senha está incorreta', async () => {

@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
+import { getAccessToken } from '@/tests/helpers/auth';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 
 describe('Barbershop Status HTTP Integration', () => {
@@ -30,7 +31,7 @@ describe('Barbershop Status HTTP Integration', () => {
 
     expect(login.status).toBe(200);
 
-    return { barbershop, barbershopToken: login.body.accessToken as string };
+    return { barbershop, barbershopToken: getAccessToken(login) };
   }
 
   describe('PATCH /api/barbershops/:id/status', () => {
