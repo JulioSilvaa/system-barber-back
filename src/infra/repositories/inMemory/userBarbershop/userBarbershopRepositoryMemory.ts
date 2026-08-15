@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { UserBarbershop } from '@/domain/entities';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
@@ -48,7 +49,7 @@ export default class UserBarbershopRepositoryMemory implements IUserBarbershopRe
   async delete(id: string): Promise<void> {
     const index = this.memberships.findIndex(membership => membership.id === id);
     if (index === -1) {
-      throw new Error('Vínculo não encontrado');
+      throw new NotFoundError('Vínculo não encontrado');
     }
     this.memberships.splice(index, 1);
   }

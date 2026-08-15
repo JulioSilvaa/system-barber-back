@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { UserBarbershop } from '@/domain/entities';
@@ -21,21 +22,21 @@ export default class AddBarberToBarbershopUseCase {
 
   async execute(input: AddBarberInputDTO, auditCtx?: AuditContext): Promise<UserBarbershop> {
     if (!input.userId || input.userId.trim() === '') {
-      throw new Error('userId é obrigatório');
+      throw new ValidationError('userId é obrigatório');
     }
 
     if (!input.barbershopId || input.barbershopId.trim() === '') {
-      throw new Error('barbershopId é obrigatório');
+      throw new ValidationError('barbershopId é obrigatório');
     }
 
     const user = await this.userRepository.findById(input.userId);
     if (!user) {
-      throw new Error('Usuário não encontrado');
+      throw new NotFoundError('Usuário não encontrado');
     }
 
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const existing = await this.userBarbershopRepository.findByUserAndBarbershop(
@@ -43,7 +44,7 @@ export default class AddBarberToBarbershopUseCase {
       input.barbershopId,
     );
     if (existing) {
-      throw new Error('Vínculo já existente');
+      throw new ValidationError('Vínculo já existente');
     }
 
     const membership = new UserBarbershop({

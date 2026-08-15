@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { UserBarbershop } from '@/domain/entities';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
@@ -17,7 +18,7 @@ export default class SwitchBarbershopUseCase {
     const target = memberships.find(membership => membership.barbershopId === barbershopId);
 
     if (!target) {
-      throw new Error('Vínculo não encontrado');
+      throw new NotFoundError('Vínculo não encontrado');
     }
 
     for (const membership of memberships) {

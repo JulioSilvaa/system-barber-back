@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import HashRepository from '@/domain/repository/HashRepository';
 import { ITokenService, TokenPayload } from '@/domain/repository/TokenService';
@@ -29,25 +30,25 @@ export default class AuthenticateBarbershopUseCase {
 
   async execute(input: AuthenticateBarbershopInputDTO): Promise<AuthenticateBarbershopOutputDTO> {
     if (!input.email || input.email.trim() === '') {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
 
     if (!input.password || input.password.trim() === '') {
-      throw new Error('Senha é obrigatória');
+      throw new ValidationError('Senha é obrigatória');
     }
 
     const barbershop = await this.barbershopRepository.findByEmail(input.email);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     if (!barbershop.isActive) {
-      throw new Error('Barbearia inativa');
+      throw new ValidationError('Barbearia inativa');
     }
 
     const passwordMatches = await this.hashRepository.compare(input.password, barbershop.password);
     if (!passwordMatches) {
-      throw new Error('Senha incorreta');
+      throw new ValidationError('Senha incorreta');
     }
 
     const payload: TokenPayload = { sub: barbershop.id, actor: 'BARBERSHOP' };

@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type AdminProps = {
   id: string;
   name: string;
@@ -31,11 +32,11 @@ export class Admin {
 
   static validatePassword(password: string): void {
     if (!password || password.trim() === '') {
-      throw new Error('Senha é obrigatória');
+      throw new ValidationError('Senha é obrigatória');
     }
 
     if (password.length < 8 || password.length > 72) {
-      throw new Error('Senha deve ter entre 8 e 72 caracteres');
+      throw new ValidationError('Senha deve ter entre 8 e 72 caracteres');
     }
 
     const hasUpperCase = /[A-Z]/.test(password);
@@ -43,7 +44,7 @@ export class Admin {
     const hasNumber = /[0-9]/.test(password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      throw new Error(
+      throw new ValidationError(
         'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     }
@@ -59,29 +60,29 @@ export class Admin {
 
   private validateName(name: string): void {
     if (!name || name.trim() === '') {
-      throw new Error('Nome é obrigatório');
+      throw new ValidationError('Nome é obrigatório');
     }
 
     const trimmed = name.trim();
     if (trimmed.length < 2 || trimmed.length > 80) {
-      throw new Error('Nome deve ter entre 2 e 80 caracteres');
+      throw new ValidationError('Nome deve ter entre 2 e 80 caracteres');
     }
   }
 
   private validateEmail(email: string): void {
     if (!email || email.trim() === '') {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
 
     const trimmedEmail = email.trim().toLowerCase();
 
     if (trimmedEmail.length > 254) {
-      throw new Error('Email é muito longo');
+      throw new ValidationError('Email é muito longo');
     }
 
     const emailRegex = /^(?=.{1,254}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(trimmedEmail)) {
-      throw new Error('Formato de email inválido');
+      throw new ValidationError('Formato de email inválido');
     }
   }
 

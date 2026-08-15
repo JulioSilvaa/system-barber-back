@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { User } from '@/domain/entities';
 import IUserRepository from '@/domain/repository/UserRepository';
 import type { PrismaClient, User as PrismaUser } from '@/generated/prisma/client';
@@ -52,7 +53,7 @@ export default class UserRepositoryPrisma implements IUserRepository {
     try {
       await this.prisma.user.delete({ where: { id } });
     } catch {
-      throw new Error('Usuário não encontrado');
+      throw new NotFoundError('Usuário não encontrado');
     }
   }
 

@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type WorkingHoursProps = {
   id: string;
   barbershopId: string;
@@ -21,15 +22,15 @@ export class WorkingHours {
 
   constructor(props: WorkingHoursProps) {
     if (!VALID_DAYS.includes(props.dayOfWeek)) {
-      throw new Error('dayOfWeek deve ser um valor entre 0 e 6');
+      throw new ValidationError('dayOfWeek deve ser um valor entre 0 e 6');
     }
 
     if (props.isOpen && (!props.openTime || !props.closeTime)) {
-      throw new Error('openTime e closeTime são obrigatórios quando aberto');
+      throw new ValidationError('openTime e closeTime são obrigatórios quando aberto');
     }
 
     if (props.openTime && props.closeTime && props.openTime >= props.closeTime) {
-      throw new Error('openTime deve ser anterior a closeTime');
+      throw new ValidationError('openTime deve ser anterior a closeTime');
     }
 
     this.id = props.id;

@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Customer } from '@/domain/entities/Customer';
@@ -21,7 +22,7 @@ export default class CreateCustomerUseCase {
   async execute(input: CreateCustomerInputDTO, auditCtx?: AuditContext): Promise<Customer> {
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const existing = await this.customerRepository.findByBarbershopAndPhone(
@@ -29,7 +30,7 @@ export default class CreateCustomerUseCase {
       input.phone,
     );
     if (existing) {
-      throw new Error('Cliente já cadastrado');
+      throw new ValidationError('Cliente já cadastrado');
     }
 
     const customer = new Customer({

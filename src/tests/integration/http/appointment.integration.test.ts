@@ -124,6 +124,28 @@ describe('Appointment HTTP Integration', () => {
       );
     });
 
+    it('deve retornar 400 quando o telefone do cliente é inválido', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
+      const barber = await createBarber(app, barbershop.id, barbershop.token);
+      const service = await createService(app, barbershop.id, barbershop.token);
+
+      const payload = {
+        ...appointmentPayload(barber.id, service.id, '2026-08-20T14:00:00.000Z'),
+        customerPhone: '16871234567',
+      };
+
+      const response = await request(app)
+        .post(`/api/barbershops/${barbershop.id}/appointments`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send(payload);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(
+        expect.objectContaining({ message: 'Celulares devem começar com 9 após o DDD' }),
+      );
+    });
+
     it('deve permitir agendar em horário não conflitante', async () => {
       const app = createApp();
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
@@ -222,7 +244,7 @@ describe('Appointment HTTP Integration', () => {
         .set('Authorization', `Bearer ${barbershopA.token}`)
         .send(appointmentPayload(barber.id, serviceB.id, '2026-08-20T14:00:00.000Z'));
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
       expect(response.body).toEqual(expect.objectContaining({ message: 'Serviço não encontrado' }));
     });
   });
@@ -372,7 +394,7 @@ describe('Appointment HTTP Integration', () => {
         .patch(`/api/barbershops/${barbershop.id}/appointments/inexistente/complete`)
         .set('Authorization', `Bearer ${barbershop.token}`);
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
       expect(response.body).toEqual(
         expect.objectContaining({ message: 'Agendamento não encontrado' }),
       );

@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { Service } from '@/domain/entities/Service';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 
@@ -31,7 +32,7 @@ export default class ServiceRepositoryMemory implements IServiceRepository {
     const existingIndex = this.services.findIndex(item => item.id === service.id);
 
     if (existingIndex === -1) {
-      throw new Error('Serviço não encontrado');
+      throw new NotFoundError('Serviço não encontrado');
     }
 
     this.services[existingIndex] = service;

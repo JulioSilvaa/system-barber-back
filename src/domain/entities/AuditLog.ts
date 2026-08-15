@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type ActorType = 'USER' | 'BARBERSHOP' | 'ADMIN' | 'PUBLIC' | 'SYSTEM';
 
 export type AuditLogProps = {
@@ -29,16 +30,16 @@ export class AuditLog {
 
   constructor(props: AuditLogProps) {
     if (!props.id) {
-      throw new Error('id do registro de auditoria é obrigatório');
+      throw new ValidationError('id do registro de auditoria é obrigatório');
     }
     if (!props.action || props.action.trim() === '') {
-      throw new Error('ação é obrigatória');
+      throw new ValidationError('ação é obrigatória');
     }
     if (!props.entityType || props.entityType.trim() === '') {
-      throw new Error('tipo da entidade é obrigatório');
+      throw new ValidationError('tipo da entidade é obrigatório');
     }
     if (!props.entityId || props.entityId.trim() === '') {
-      throw new Error('id da entidade é obrigatório');
+      throw new ValidationError('id da entidade é obrigatório');
     }
 
     this.id = props.id;

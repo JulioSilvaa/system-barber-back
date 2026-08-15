@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Evaluation } from '@/domain/entities';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import IEvaluationRepository from '@/domain/repository/EvaluationRepository';
-import { AppError } from '@/domain/errors';
+import { AppError, ValidationError, NotFoundError } from '@/domain/errors';
 
 export type CreateEvaluationInputDTO = {
   barbershopId: string;
@@ -24,11 +24,11 @@ export default class CreateEvaluationUseCase {
       input.barbershopId,
     );
     if (!appointment) {
-      throw new Error('Agendamento não encontrado');
+      throw new NotFoundError('Agendamento não encontrado');
     }
 
     if (appointment.status !== 'COMPLETED') {
-      throw new Error('Apenas atendimentos concluídos podem ser avaliados');
+      throw new ValidationError('Apenas atendimentos concluídos podem ser avaliados');
     }
 
     const existing = await this.evaluationRepository.findByAppointment(input.appointmentId);

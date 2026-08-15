@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type MembershipStatus = 'ACTIVE' | 'INACTIVE';
 
 export type LocalBarbershopRole = 'OWNER' | 'BARBER';
@@ -54,7 +55,7 @@ export default class UserBarbershop {
   public setCommissionRate(rate: number | null): void {
     if (rate !== null) {
       if (!Number.isInteger(rate) || rate < 0 || rate > 100) {
-        throw new Error('Percentual de comissão deve estar entre 0 e 100');
+        throw new ValidationError('Percentual de comissão deve estar entre 0 e 100');
       }
     }
 
@@ -64,21 +65,21 @@ export default class UserBarbershop {
   // ================= VALIDAÇÕES =================
   private validate(): void {
     if (!this.userId || this.userId.trim() === '') {
-      throw new Error('ID do usuário é obrigatório');
+      throw new ValidationError('ID do usuário é obrigatório');
     }
 
     if (!this.barbershopId || this.barbershopId.trim() === '') {
-      throw new Error('ID da barbearia é obrigatório');
+      throw new ValidationError('ID da barbearia é obrigatório');
     }
 
     const validStatuses: MembershipStatus[] = ['ACTIVE', 'INACTIVE'];
     if (!this.status || !validStatuses.includes(this.status)) {
-      throw new Error('Status de membro inválido');
+      throw new ValidationError('Status de membro inválido');
     }
 
     const validRoles: LocalBarbershopRole[] = ['OWNER', 'BARBER'];
     if (!this.localRole || !validRoles.includes(this.localRole)) {
-      throw new Error('Papel local inválido');
+      throw new ValidationError('Papel local inválido');
     }
 
     if (
@@ -87,7 +88,7 @@ export default class UserBarbershop {
         this.commissionRate < 0 ||
         this.commissionRate > 100)
     ) {
-      throw new Error('Percentual de comissão deve estar entre 0 e 100');
+      throw new ValidationError('Percentual de comissão deve estar entre 0 e 100');
     }
   }
 }

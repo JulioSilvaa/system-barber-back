@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
 export type AppointmentPaymentMethod = 'PIX' | 'CARD' | 'CASH';
@@ -31,7 +32,7 @@ export class Appointment {
 
   constructor(props: AppointmentProps) {
     if (props.endDate <= props.startDate) {
-      throw new Error('end date must be greater than start date');
+      throw new ValidationError('end date must be greater than start date');
     }
 
     this.id = props.id;
@@ -57,19 +58,19 @@ export class Appointment {
     note?: string | null;
   }): void {
     if (this.status === 'CANCELLED') {
-      throw new Error('appointment canceled');
+      throw new ValidationError('appointment canceled');
     }
 
     if (this.status === 'COMPLETED') {
-      throw new Error('appointment already completed');
+      throw new ValidationError('appointment already completed');
     }
 
     if (!Number.isInteger(payment.pricePaidCents) || payment.pricePaidCents <= 0) {
-      throw new Error('Valor da cobrança é obrigatório');
+      throw new ValidationError('Valor da cobrança é obrigatório');
     }
 
     if (!['PIX', 'CARD', 'CASH'].includes(payment.paymentMethod)) {
-      throw new Error('Forma de pagamento inválida');
+      throw new ValidationError('Forma de pagamento inválida');
     }
 
     this.pricePaidCents = payment.pricePaidCents;
@@ -80,7 +81,7 @@ export class Appointment {
 
   public cancel(): void {
     if (this.status === 'COMPLETED') {
-      throw new Error('appointment already completed');
+      throw new ValidationError('appointment already completed');
     }
 
     this.status = 'CANCELLED';

@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Admin } from '@/domain/entities';
 import IAdminRepository from '@/domain/repository/AdminRepository';
@@ -40,18 +41,18 @@ export default class CreateAdminUseCase {
     auditCtx?: AuditContext,
   ): Promise<CreateAdminOutputDTO> {
     if (!input.name?.trim()) {
-      throw new Error('Nome é obrigatório');
+      throw new ValidationError('Nome é obrigatório');
     }
 
     if (!input.email?.trim()) {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
 
     Admin.validatePassword(input.password);
 
     const existing = await this.adminRepository.findByEmail(input.email);
     if (existing) {
-      throw new Error('Email já cadastrado');
+      throw new ValidationError('Email já cadastrado');
     }
 
     const hashedPassword = await this.hashRepository.hash(input.password);

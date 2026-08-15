@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import { CreateUserInputDTO, CreateUserOutputDTO } from '@/application/dtos/UserDto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import User from '@/domain/entities/User';
@@ -23,7 +24,7 @@ export default class CreateUserUseCase {
 
     const existingUser = await this._userRepository.findByEmail(input.email);
     if (existingUser) {
-      throw new Error('Email já cadastrado');
+      throw new ValidationError('Email já cadastrado');
     }
 
     const user = this.createUser(input);
@@ -47,10 +48,10 @@ export default class CreateUserUseCase {
 
   private validateInput(input: CreateUserInputDTO): void {
     if (!input.name?.trim()) {
-      throw new Error('Nome é obrigatório');
+      throw new ValidationError('Nome é obrigatório');
     }
     if (!input.email?.trim()) {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
   }
 

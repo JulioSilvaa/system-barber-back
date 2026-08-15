@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Service } from '@/domain/entities/Service';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
@@ -19,7 +20,7 @@ export default class UpdateServiceUseCase {
   async execute(input: UpdateServiceInputDTO, auditCtx?: AuditContext): Promise<Service> {
     const service = await this.serviceRepository.findById(input.serviceId, input.barbershopId);
     if (!service) {
-      throw new Error('Serviço não encontrado');
+      throw new NotFoundError('Serviço não encontrado');
     }
 
     const before = {

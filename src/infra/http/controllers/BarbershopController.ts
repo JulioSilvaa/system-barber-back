@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import { NextFunction, Request, Response } from 'express';
 
 import AuditService from '@/application/services/AuditService';
@@ -207,26 +208,26 @@ export default class BarbershopController {
       const { name, primaryColor, logoUrl } = req.body ?? {};
 
       if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
-        throw new Error('name must be a non-empty string');
+        throw new ValidationError('name must be a non-empty string');
       }
       if (primaryColor !== undefined && typeof primaryColor !== 'string') {
-        throw new Error('primaryColor must be a string');
+        throw new ValidationError('primaryColor must be a string');
       }
       if (
         primaryColor !== undefined &&
         !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(primaryColor)
       ) {
-        throw new Error('primaryColor must be a valid HEX color');
+        throw new ValidationError('primaryColor must be a valid HEX color');
       }
       if (logoUrl !== undefined && typeof logoUrl !== 'string') {
-        throw new Error('logoUrl must be a string');
+        throw new ValidationError('logoUrl must be a string');
       }
       if (
         logoUrl !== undefined &&
         logoUrl !== '' &&
         !/^\/uploads\/[a-zA-Z0-9_.-]+(\?[a-zA-Z0-9_.=&-]+)?$/.test(logoUrl)
       ) {
-        throw new Error('logoUrl must point to an uploaded file');
+        throw new ValidationError('logoUrl must point to an uploaded file');
       }
 
       const barbershop = await this.updateBrandingUseCase.execute(
@@ -249,7 +250,7 @@ export default class BarbershopController {
   uploadLogo = async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
-        throw new Error('logo file is required');
+        throw new ValidationError('logo file is required');
       }
 
       const barbershopId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type ServiceProps = {
   id: string;
   barbershopId: string;
@@ -17,11 +18,11 @@ export class Service {
 
   constructor(props: ServiceProps) {
     if (props.priceCents <= 0) {
-      throw new Error('price must be greater than zero');
+      throw new ValidationError('price must be greater than zero');
     }
 
     if (props.durationMinutes <= 0) {
-      throw new Error('duration must be greater than zero');
+      throw new ValidationError('duration must be greater than zero');
     }
 
     this.id = props.id;
@@ -35,7 +36,7 @@ export class Service {
   public updateDetails(details: Partial<Pick<Service, 'name' | 'priceCents' | 'durationMinutes'>>) {
     if (details.name !== undefined) {
       if (!details.name.trim()) {
-        throw new Error('Nome do serviço é obrigatório');
+        throw new ValidationError('Nome do serviço é obrigatório');
       }
       this.name = details.name.trim();
     }
@@ -58,13 +59,13 @@ export class Service {
 
   private validate(): void {
     if (!this.name || this.name.trim() === '') {
-      throw new Error('Nome do serviço é obrigatório');
+      throw new ValidationError('Nome do serviço é obrigatório');
     }
     if (this.priceCents <= 0) {
-      throw new Error('price must be greater than zero');
+      throw new ValidationError('price must be greater than zero');
     }
     if (this.durationMinutes <= 0) {
-      throw new Error('duration must be greater than zero');
+      throw new ValidationError('duration must be greater than zero');
     }
   }
 }

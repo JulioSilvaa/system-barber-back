@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Appointment } from '@/domain/entities/Appointment';
@@ -36,24 +37,24 @@ export default class CreateAppointmentUseCase {
 
   async execute(input: CreateAppointmentInputDTO, auditCtx?: AuditContext): Promise<Appointment> {
     if (!input.customerName || input.customerName.trim() === '') {
-      throw new Error('Nome do cliente é obrigatório');
+      throw new ValidationError('Nome do cliente é obrigatório');
     }
 
     if (!input.customerPhone || input.customerPhone.trim() === '') {
-      throw new Error('Telefone do cliente é obrigatório');
+      throw new ValidationError('Telefone do cliente é obrigatório');
     }
 
     if (!(input.startDate instanceof Date) || Number.isNaN(input.startDate.getTime())) {
-      throw new Error('Data de início é obrigatória');
+      throw new ValidationError('Data de início é obrigatória');
     }
 
     if (input.startDate.getTime() < Date.now()) {
-      throw new Error('Não é possível agendar em um horário no passado');
+      throw new ValidationError('Não é possível agendar em um horário no passado');
     }
 
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const barberMembership = await this.userBarbershopRepository.findByUserAndBarbershop(
@@ -61,12 +62,12 @@ export default class CreateAppointmentUseCase {
       input.barbershopId,
     );
     if (!barberMembership || !barberMembership.isActive()) {
-      throw new Error('Barbeiro não encontrado');
+      throw new NotFoundError('Barbeiro não encontrado');
     }
 
     const service = await this.serviceRepository.findById(input.serviceId, input.barbershopId);
     if (!service || !service.isActive) {
-      throw new Error('Serviço não encontrado');
+      throw new NotFoundError('Serviço não encontrado');
     }
 
     await this.validateWorkingHours(input, service.durationMinutes);
@@ -95,7 +96,7 @@ export default class CreateAppointmentUseCase {
       existing => existing.status === 'SCHEDULED' && existing.isOverlappingWith(appointment),
     );
     if (hasConflict) {
-      throw new Error('Já existe um agendamento neste horário');
+      throw new ValidationError('Já existe um agendamento neste horário');
     }
 
     const saved = await this.appointmentRepository.save(appointment);
@@ -132,7 +133,7 @@ export default class CreateAppointmentUseCase {
     const dayHours = workingHours.find(wh => wh.dayOfWeek === input.startDate.getDay());
 
     if (dayHours && (!dayHours.isOpen || !dayHours.openTime || !dayHours.closeTime)) {
-      throw new Error('Barbearia fechada neste dia');
+      throw new ValidationError('Barbearia fechada neste dia');
     }
 
     if (!dayHours?.openTime || !dayHours?.closeTime) {
@@ -145,7 +146,7 @@ export default class CreateAppointmentUseCase {
     const appointmentEndMinute = appointmentStartMinute + durationMinutes;
 
     if (appointmentStartMinute < startMinute || appointmentEndMinute > endMinute) {
-      throw new Error('Horário fora do expediente');
+      throw new ValidationError('Horário fora do expediente');
     }
   }
 

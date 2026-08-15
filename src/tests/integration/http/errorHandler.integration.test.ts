@@ -54,7 +54,8 @@ describe('Error Handler HTTP Integration', () => {
     const response = await request(app)
       .patch(`/api/barbershops/${barbershopId}/branding`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ primaryColor: 'red' });
+      .set('Content-Type', 'application/json')
+      .send('{ json inválido ');
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: 'Erro interno do servidor' });

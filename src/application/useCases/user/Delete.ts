@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import UserRepository from '@/domain/repository/UserRepository';
 
@@ -11,17 +12,17 @@ export default class DeleteUserUseCase {
   }
 
   async execute(id: string, auditCtx?: AuditContext): Promise<void> {
-    if (!id || id.trim() === '') throw new Error('ID do usuário é obrigatório');
+    if (!id || id.trim() === '') throw new ValidationError('ID do usuário é obrigatório');
 
     const trimmedId = id.trim();
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(trimmedId)) {
-      throw new Error('ID do usuário inválido');
+      throw new ValidationError('ID do usuário inválido');
     }
 
     const user = await this._userRepository.findById(trimmedId);
 
-    if (!user) throw new Error('Usuário não encontrado');
+    if (!user) throw new NotFoundError('Usuário não encontrado');
 
     await this._userRepository.delete(trimmedId);
 

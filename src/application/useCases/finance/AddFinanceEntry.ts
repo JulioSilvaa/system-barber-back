@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 
 import AuditService, { AuditContext } from '@/application/services/AuditService';
@@ -24,7 +25,7 @@ export default class AddFinanceEntryUseCase {
   async execute(input: AddFinanceEntryInputDTO, auditCtx?: AuditContext): Promise<FinanceEntry> {
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const entry = new FinanceEntry({

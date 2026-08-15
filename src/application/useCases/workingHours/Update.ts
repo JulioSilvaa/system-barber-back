@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { WorkingHours } from '@/domain/entities/WorkingHours';
@@ -30,11 +31,11 @@ export default class UpdateWorkingHoursUseCase {
   ): Promise<WorkingHours[]> {
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     if (!input.days || input.days.length === 0) {
-      throw new Error('É necessário informar ao menos um dia');
+      throw new ValidationError('É necessário informar ao menos um dia');
     }
 
     const saved: WorkingHours[] = [];

@@ -200,7 +200,7 @@ describe('Service HTTP Integration', () => {
         .set('Authorization', `Bearer ${barbershop.token}`)
         .send({ name: 'Qualquer' });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
     });
   });
 

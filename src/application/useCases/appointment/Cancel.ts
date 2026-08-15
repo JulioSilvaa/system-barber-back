@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Appointment } from '@/domain/entities/Appointment';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
@@ -15,7 +16,7 @@ export default class CancelAppointmentUseCase {
   ): Promise<Appointment> {
     const appointment = await this.appointmentRepository.findById(appointmentId, barbershopId);
     if (!appointment) {
-      throw new Error('Agendamento não encontrado');
+      throw new NotFoundError('Agendamento não encontrado');
     }
 
     const before = { id: appointment.id, status: appointment.status };

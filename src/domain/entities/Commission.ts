@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type CommissionProps = {
   id: string;
   barbershopId: string;
@@ -40,23 +41,23 @@ export default class Commission {
 
   private validate(): void {
     if (!this.barbershopId || this.barbershopId.trim() === '') {
-      throw new Error('ID da barbearia é obrigatório');
+      throw new ValidationError('ID da barbearia é obrigatório');
     }
 
     if (!this.barberId || this.barberId.trim() === '') {
-      throw new Error('ID do barbeiro é obrigatório');
+      throw new ValidationError('ID do barbeiro é obrigatório');
     }
 
     if (!Number.isInteger(this.serviceValueCents) || this.serviceValueCents < 0) {
-      throw new Error('Valor do serviço inválido');
+      throw new ValidationError('Valor do serviço inválido');
     }
 
     if (!Number.isInteger(this.commissionCents) || this.commissionCents < 0) {
-      throw new Error('Valor da comissão inválido');
+      throw new ValidationError('Valor da comissão inválido');
     }
 
     if (!Number.isInteger(this.rate) || this.rate < 0 || this.rate > 100) {
-      throw new Error('Percentual de comissão deve estar entre 0 e 100');
+      throw new ValidationError('Percentual de comissão deve estar entre 0 e 100');
     }
   }
 }

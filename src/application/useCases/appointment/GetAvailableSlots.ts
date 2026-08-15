@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { IAppointmentRepository } from '@/domain/repository/AppointmentRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
@@ -29,7 +30,7 @@ export default class GetAvailableSlotsUseCase {
   async execute(input: AvailableSlotsInputDTO): Promise<AvailableSlot[]> {
     const service = await this.serviceRepository.findById(input.serviceId, input.barbershopId);
     if (!service || !service.isActive) {
-      throw new Error('Serviço não encontrado');
+      throw new NotFoundError('Serviço não encontrado');
     }
 
     const duration = service.durationMinutes;

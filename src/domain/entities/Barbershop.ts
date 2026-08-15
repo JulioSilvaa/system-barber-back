@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type BarbershopProps = {
   id: string;
   name: string;
@@ -42,7 +43,7 @@ export class Barbershop {
     const isValid = /^[a-z0-9-]+$/i.test(slug) && !slug.includes(' ');
 
     if (!isValid || slug !== slug.toLowerCase()) {
-      throw new Error('slug must contain only lowercase letters, numbers, and hyphens');
+      throw new ValidationError('slug must contain only lowercase letters, numbers, and hyphens');
     }
   }
 
@@ -50,7 +51,7 @@ export class Barbershop {
     const emailRegex = /^(?=.{1,254}$)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if (!email || !emailRegex.test(email)) {
-      throw new Error('email must be a valid email address');
+      throw new ValidationError('email must be a valid email address');
     }
   }
 
@@ -58,13 +59,13 @@ export class Barbershop {
     const isValid = /^\+?[1-9]\d{8,14}$/.test(phone);
 
     if (!isValid) {
-      throw new Error('phone must be a valid international phone number');
+      throw new ValidationError('phone must be a valid international phone number');
     }
   }
 
   private validatePassword(password: string): void {
     if (!password || password.length < 8) {
-      throw new Error(
+      throw new ValidationError(
         'password must be at least 8 characters long and contain at least one letter and one number',
       );
     }
@@ -73,7 +74,7 @@ export class Barbershop {
     const hasNumber = /[0-9]/.test(password);
 
     if (!hasLetter || !hasNumber) {
-      throw new Error(
+      throw new ValidationError(
         'password must be at least 8 characters long and contain at least one letter and one number',
       );
     }

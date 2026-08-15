@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 
@@ -15,7 +16,7 @@ export default class RemoveBarberUseCase {
   async execute(input: RemoveBarberInputDTO, auditCtx?: AuditContext): Promise<void> {
     const membership = await this.userBarbershopRepository.findById(input.membershipId);
     if (!membership || membership.barbershopId !== input.barbershopId) {
-      throw new Error('Vínculo não encontrado');
+      throw new NotFoundError('Vínculo não encontrado');
     }
 
     await this.userBarbershopRepository.delete(input.membershipId);

@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import { NextFunction, Request, Response } from 'express';
 
 import AuditService from '@/application/services/AuditService';
@@ -290,7 +291,7 @@ function parseDateQuery(value: unknown): Date {
   }
 
   if (typeof value !== 'string') {
-    throw new Error('Data inválida');
+    throw new ValidationError('Data inválida');
   }
 
   const match = value.match(DATE_ONLY_PATTERN);
@@ -299,7 +300,7 @@ function parseDateQuery(value: unknown): Date {
     const date = new Date(Number(year), Number(month) - 1, Number(day));
 
     if (Number.isNaN(date.getTime())) {
-      throw new Error('Data inválida');
+      throw new ValidationError('Data inválida');
     }
 
     return date;
@@ -307,7 +308,7 @@ function parseDateQuery(value: unknown): Date {
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    throw new Error('Data inválida');
+    throw new ValidationError('Data inválida');
   }
 
   return date;

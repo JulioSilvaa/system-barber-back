@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type EvaluationProps = {
   id: string;
   barbershopId: string;
@@ -30,19 +31,19 @@ export default class Evaluation {
 
   private validate(): void {
     if (!this.barbershopId || this.barbershopId.trim() === '') {
-      throw new Error('ID da barbearia é obrigatório');
+      throw new ValidationError('ID da barbearia é obrigatório');
     }
 
     if (!this.appointmentId || this.appointmentId.trim() === '') {
-      throw new Error('ID do agendamento é obrigatório');
+      throw new ValidationError('ID do agendamento é obrigatório');
     }
 
     if (!this.barberId || this.barberId.trim() === '') {
-      throw new Error('ID do barbeiro é obrigatório');
+      throw new ValidationError('ID do barbeiro é obrigatório');
     }
 
     if (!Number.isInteger(this.rating) || this.rating < 1 || this.rating > 5) {
-      throw new Error('A avaliação deve ser uma nota entre 1 e 5');
+      throw new ValidationError('A avaliação deve ser uma nota entre 1 e 5');
     }
   }
 }

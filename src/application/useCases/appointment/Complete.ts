@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 
 import AuditService, { AuditContext } from '@/application/services/AuditService';
@@ -31,11 +32,11 @@ export default class CompleteAppointmentUseCase {
       input.barbershopId,
     );
     if (!appointment) {
-      throw new Error('Agendamento não encontrado');
+      throw new NotFoundError('Agendamento não encontrado');
     }
 
     if (appointment.status === 'CANCELLED') {
-      throw new Error('appointment canceled');
+      throw new ValidationError('appointment canceled');
     }
 
     const paidPriceCents = input.paidPriceCents ?? (await this.servicePrice(appointment)) ?? 0;

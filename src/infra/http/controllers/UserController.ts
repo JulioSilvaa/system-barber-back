@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
 
@@ -53,7 +54,7 @@ export default class UserController {
         );
 
         if (existing) {
-          throw new Error('Vínculo já existente');
+          throw new ValidationError('Vínculo já existente');
         }
 
         const membership = await this.userBarbershopRepository.save(

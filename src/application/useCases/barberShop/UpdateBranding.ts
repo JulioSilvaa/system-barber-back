@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
@@ -18,7 +19,7 @@ export default class UpdateBrandingUseCase {
   async execute(input: UpdateBrandingInput, auditCtx?: AuditContext): Promise<Barbershop> {
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const before = {
@@ -33,7 +34,7 @@ export default class UpdateBrandingUseCase {
       ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
     });
     if (!updated) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     await this.auditService?.record({

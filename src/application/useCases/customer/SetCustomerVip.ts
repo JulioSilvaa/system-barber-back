@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Customer } from '@/domain/entities/Customer';
 import ICustomerRepository from '@/domain/repository/CustomerRepository';
@@ -17,7 +18,7 @@ export default class SetCustomerVipUseCase {
   async execute(input: SetCustomerVipInput, auditCtx?: AuditContext): Promise<Customer> {
     const customer = await this.customerRepository.findById(input.customerId, input.barbershopId);
     if (!customer) {
-      throw new Error('Cliente não encontrado');
+      throw new NotFoundError('Cliente não encontrado');
     }
 
     if (customer.vip === input.vip) {
@@ -30,7 +31,7 @@ export default class SetCustomerVipUseCase {
       input.vip,
     );
     if (!updated) {
-      throw new Error('Cliente não encontrado');
+      throw new NotFoundError('Cliente não encontrado');
     }
 
     await this.auditService?.record({

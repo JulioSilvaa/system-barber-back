@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import HashRepository from '@/domain/repository/HashRepository';
 import IAdminRepository from '@/domain/repository/AdminRepository';
 import { ITokenService, TokenPayload } from '@/domain/repository/TokenService';
@@ -27,25 +28,25 @@ export default class AuthenticateAdminUseCase {
 
   async execute(input: AuthenticateAdminInputDTO): Promise<AuthenticateAdminOutputDTO> {
     if (!input.email || input.email.trim() === '') {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
 
     if (!input.password || input.password.trim() === '') {
-      throw new Error('Senha é obrigatória');
+      throw new ValidationError('Senha é obrigatória');
     }
 
     const admin = await this.adminRepository.findByEmail(input.email);
     if (!admin) {
-      throw new Error('Admin não encontrado');
+      throw new NotFoundError('Admin não encontrado');
     }
 
     if (!admin.isActive) {
-      throw new Error('Admin inativo');
+      throw new ValidationError('Admin inativo');
     }
 
     const passwordMatches = await this.hashRepository.compare(input.password, admin.password);
     if (!passwordMatches) {
-      throw new Error('Senha incorreta');
+      throw new ValidationError('Senha incorreta');
     }
 
     const payload: TokenPayload = { sub: admin.id, actor: 'ADMIN' };

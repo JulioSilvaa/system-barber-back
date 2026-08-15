@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { generateUniqueSlug } from '@/application/services/SlugService';
 import { Barbershop } from '@/domain/entities';
@@ -39,7 +40,7 @@ export default class CreateBarberShopUseCase {
 
     const existingByEmail = await this._barbershopRepository.findByEmail(input.email);
     if (existingByEmail) {
-      throw new Error('Email já em uso');
+      throw new ValidationError('Email já em uso');
     }
 
     const hashedPassword = await this._hashRepository.hash(input.password);
@@ -74,21 +75,21 @@ export default class CreateBarberShopUseCase {
 
   private validateInput(input: CreateBarberShopInputDTO): void {
     if (!input.name || input.name.trim() === '') {
-      throw new Error('Nome é obrigatório');
+      throw new ValidationError('Nome é obrigatório');
     }
 
     if (!input.email || input.email.trim() === '') {
-      throw new Error('Email é obrigatório');
+      throw new ValidationError('Email é obrigatório');
     }
 
     if (!input.password || input.password.trim() === '') {
-      throw new Error('Senha é obrigatória');
+      throw new ValidationError('Senha é obrigatória');
     }
   }
 
   private validatePasswordStrength(password: string): void {
     if (password.length < 8 || password.length > 72) {
-      throw new Error('Senha deve ter entre 8 e 72 caracteres');
+      throw new ValidationError('Senha deve ter entre 8 e 72 caracteres');
     }
 
     const hasUpperCase = /[A-Z]/.test(password);
@@ -96,7 +97,7 @@ export default class CreateBarberShopUseCase {
     const hasNumber = /[0-9]/.test(password);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      throw new Error(
+      throw new ValidationError(
         'Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número',
       );
     }

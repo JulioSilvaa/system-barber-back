@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { UserBarbershop } from '@/domain/entities';
 import { LocalBarbershopRole, MembershipStatus } from '@/domain/entities/UserBarbershop';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
@@ -82,7 +83,7 @@ export default class UserBarbershopRepositoryPrisma implements IUserBarbershopRe
     try {
       await this.prisma.userBarbershop.delete({ where: { id } });
     } catch {
-      throw new Error('Vínculo não encontrado');
+      throw new NotFoundError('Vínculo não encontrado');
     }
   }
 }

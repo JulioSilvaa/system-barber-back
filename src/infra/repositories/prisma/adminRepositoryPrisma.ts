@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { Admin } from '@/domain/entities';
 import IAdminRepository from '@/domain/repository/AdminRepository';
 import type { Admin as PrismaAdmin, PrismaClient } from '@/generated/prisma/client';
@@ -52,7 +53,7 @@ export default class AdminRepositoryPrisma implements IAdminRepository {
     try {
       await this.prisma.admin.delete({ where: { id } });
     } catch {
-      throw new Error('Admin não encontrado');
+      throw new NotFoundError('Admin não encontrado');
     }
   }
 }

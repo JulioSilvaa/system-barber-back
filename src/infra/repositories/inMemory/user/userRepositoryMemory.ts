@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { User } from '@/domain/entities';
 import IUserRepository from '@/domain/repository/UserRepository';
 
@@ -31,7 +32,7 @@ export default class UserRepositoryMemory implements IUserRepository {
   async delete(id: string): Promise<void> {
     const userIndex = this.users.findIndex(user => user.id === id);
     if (userIndex === -1) {
-      throw new Error('Usuário não encontrado');
+      throw new NotFoundError('Usuário não encontrado');
     }
     this.users.splice(userIndex, 1);
   }

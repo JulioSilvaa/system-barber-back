@@ -1,3 +1,4 @@
+import { ValidationError } from '@/domain/errors';
 export type FinanceEntryKind = 'ENTRY' | 'EXIT';
 
 export type FinanceEntryProps = {
@@ -23,11 +24,11 @@ export default class FinanceEntry {
 
   constructor(props: FinanceEntryProps) {
     if (!['ENTRY', 'EXIT'].includes(props.kind)) {
-      throw new Error('Tipo de lançamento inválido');
+      throw new ValidationError('Tipo de lançamento inválido');
     }
 
     if (!Number.isInteger(props.amountCents) || props.amountCents <= 0) {
-      throw new Error('Valor do lançamento é obrigatório');
+      throw new ValidationError('Valor do lançamento é obrigatório');
     }
 
     this.id = props.id;

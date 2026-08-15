@@ -1,3 +1,4 @@
+import { ValidationError, NotFoundError } from '@/domain/errors';
 import { randomUUID } from 'node:crypto';
 import AuditService, { AuditContext } from '@/application/services/AuditService';
 import { Service } from '@/domain/entities/Service';
@@ -20,12 +21,12 @@ export default class CreateServiceUseCase {
 
   async execute(input: CreateServiceInputDTO, auditCtx?: AuditContext): Promise<Service> {
     if (!input.name || input.name.trim() === '') {
-      throw new Error('Nome do serviço é obrigatório');
+      throw new ValidationError('Nome do serviço é obrigatório');
     }
 
     const barbershop = await this.barbershopRepository.findById(input.barbershopId);
     if (!barbershop) {
-      throw new Error('Barbearia não encontrada');
+      throw new NotFoundError('Barbearia não encontrada');
     }
 
     const service = new Service({

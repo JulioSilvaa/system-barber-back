@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/domain/errors';
 import { Admin } from '@/domain/entities';
 import IAdminRepository from '@/domain/repository/AdminRepository';
 
@@ -31,7 +32,7 @@ export default class AdminRepositoryMemory implements IAdminRepository {
   async delete(id: string): Promise<void> {
     const adminIndex = this.admins.findIndex(admin => admin.id === id);
     if (adminIndex === -1) {
-      throw new Error('Admin não encontrado');
+      throw new NotFoundError('Admin não encontrado');
     }
     this.admins.splice(adminIndex, 1);
   }
