@@ -2,10 +2,8 @@ import { Request } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const UPLOADS_DIR = path.resolve(__dirname, '../../../../uploads');
+export const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 

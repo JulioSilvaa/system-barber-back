@@ -224,7 +224,7 @@ export default class BarbershopController {
       if (
         logoUrl !== undefined &&
         logoUrl !== '' &&
-        !/^\/uploads\/[a-zA-Z0-9_.-]+$/.test(logoUrl)
+        !/^\/uploads\/[a-zA-Z0-9_.-]+(\?[a-zA-Z0-9_.=&-]+)?$/.test(logoUrl)
       ) {
         throw new Error('logoUrl must point to an uploaded file');
       }
