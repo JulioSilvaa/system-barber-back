@@ -6,10 +6,7 @@ export default class GetWorkingHoursUseCase {
 
   async execute(barbershopId: string, barberId?: string | null): Promise<WorkingHours[]> {
     if (barberId) {
-      const barberHours = await this.workingHoursRepository.findByBarber(barbershopId, barberId);
-      if (barberHours.length > 0) {
-        return barberHours;
-      }
+      return this.workingHoursRepository.findByBarber(barbershopId, barberId);
     }
 
     const hours = await this.workingHoursRepository.findAll(barbershopId);

@@ -47,6 +47,9 @@ describe('Working Hours HTTP Integration', () => {
           phone: '11977778888',
           barbershopId: barbershop.id,
         });
+      if (res.status !== 201) {
+        throw new Error(`createBarber falhou (${name}): ${res.status} ${JSON.stringify(res.body)}`);
+      }
       return (res.body as { id: string }).id;
     }
 
@@ -159,6 +162,58 @@ describe('Working Hours HTTP Integration', () => {
         openTime: '11:00',
         closeTime: '15:00',
       }),
+    );
+  });
+
+  it('não aplica fallback: barbeiro sem horário próprio retorna lista vazia', async () => {
+    const { app, barbershop, token, createBarber } = await createContext();
+    const barberA = await createBarber('Davi');
+
+    const putShop = await request(app)
+      .put(`/api/barbershops/${barbershop.id}/working-hours`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ days: daysPayload('09:00', '19:00') });
+    expect(putShop.status).toBe(200);
+
+    const getBarber = await request(app)
+      .get(`/api/barbershops/${barbershop.id}/working-hours`)
+      .query({ barberId: barberA });
+    expect(getBarber.status).toBe(200);
+    expect(getBarber.body).toEqual([]);
+
+    const getShop = await request(app).get(`/api/barbershops/${barbershop.id}/working-hours`);
+    expect(getShop.status).toBe(200);
+    expect(getShop.body).toHaveLength(7);
+  });
+
+  it('salvar o expediente de um barbeiro não altera o de outro nem o da barbearia', async () => {
+    const { app, barbershop, token, createBarber } = await createContext();
+    const barberA = await createBarber('Eva');
+    const barberB = await createBarber('Fabio');
+
+    const putShop = await request(app)
+      .put(`/api/barbershops/${barbershop.id}/working-hours`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ days: daysPayload('09:00', '19:00') });
+    expect(putShop.status).toBe(200);
+
+    const putA = await request(app)
+      .put(`/api/barbershops/${barbershop.id}/working-hours`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ barberId: barberA, days: daysPayload('07:00', '12:00') });
+    expect(putA.status).toBe(200);
+
+    const getB = await request(app)
+      .get(`/api/barbershops/${barbershop.id}/working-hours`)
+      .query({ barberId: barberB });
+    expect(getB.status).toBe(200);
+    expect(getB.body).toEqual([]);
+
+    const getShop = await request(app).get(`/api/barbershops/${barbershop.id}/working-hours`);
+    expect(getShop.status).toBe(200);
+    expect(getShop.body).toHaveLength(7);
+    expect(getShop.body[1]).toEqual(
+      expect.objectContaining({ barberId: null, isOpen: true, openTime: '09:00' }),
     );
   });
 });
