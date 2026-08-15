@@ -1,15 +1,11 @@
 import { Server as HttpServer } from 'http';
-import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { ITokenService } from '@/domain/repository/TokenService';
+import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import { ACCESS_COOKIE } from '@/infra/http/helpers/authCookie';
 import { isOriginAllowed } from '@/infra/http/helpers/cors';
 
 let io: SocketIOServer | null = null;
-
-interface IPayload {
-  sub: string;
-  actor?: 'USER' | 'BARBERSHOP' | 'ADMIN';
-}
 
 function parseCookies(header: string): Record<string, string> {
   const cookies: Record<string, string> = {};
@@ -27,7 +23,7 @@ function parseCookies(header: string): Record<string, string> {
   return cookies;
 }
 
-export function createSocketAuthMiddleware(secret = process.env.JWT_ACCESS_SECRET) {
+export function createSocketAuthMiddleware(tokenService: ITokenService = new JwtTokenService()) {
   return (socket: Socket, next: (err?: Error) => void) => {
     try {
       const cookies = parseCookies(socket.handshake.headers.cookie ?? '');
@@ -37,11 +33,7 @@ export function createSocketAuthMiddleware(secret = process.env.JWT_ACCESS_SECRE
         return next(new Error('Token não fornecido'));
       }
 
-      if (!secret) {
-        return next(new Error('Erro de configuração do servidor'));
-      }
-
-      const decoded = jwt.verify(token, secret) as IPayload;
+      const decoded = tokenService.verify(token, 'access');
       if (decoded.actor !== 'BARBERSHOP' || !decoded.sub) {
         return next(new Error('Acesso negado'));
       }

@@ -7,6 +7,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import createAdminRoutes from '../routes/adminRoutes';
+import createAuthRoutes from '../routes/authRoutes';
 import createBarbershopRoutes from '../routes/barbershopRoutes';
 import createMembershipRoutes from '../routes/membershipRoutes';
 import createServiceRoutes from '../routes/serviceRoutes';
@@ -104,6 +105,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
 
   app.use(
     '/api',
+    createAuthRoutes({ tokenService }),
     createUserRoutes({ userRepository, userBarbershopRepository, auditService }),
     createBarbershopRoutes({
       barbershopRepository,

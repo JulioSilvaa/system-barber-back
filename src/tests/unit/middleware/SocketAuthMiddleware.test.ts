@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import jwt from 'jsonwebtoken';
 import type { Socket } from 'socket.io';
 import { createSocketAuthMiddleware } from '@/infra/websocket/socketServer';
@@ -21,29 +21,33 @@ function makeNext() {
 }
 
 describe('Socket auth middleware', () => {
+  beforeEach(() => {
+    process.env.JWT_ACCESS_SECRET = SECRET;
+  });
+
   it('rejeita conexão sem cookie de acesso', () => {
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(makeSocket(''), next);
+    createSocketAuthMiddleware()(makeSocket(''), next);
     expect(errors[0]?.message).toBe('Token não fornecido');
   });
 
   it('rejeita token inválido ou expirado', () => {
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(makeSocket('sb_access_token=abc.def.ghi'), next);
+    createSocketAuthMiddleware()(makeSocket('sb_access_token=abc.def.ghi'), next);
     expect(errors[0]?.message).toBe('Token inválido ou expirado');
   });
 
   it('rejeita token de actor USER', () => {
     const token = jwt.sign({ sub: 'user-1', actor: 'USER' }, SECRET);
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(makeSocket(`sb_access_token=${token}`), next);
+    createSocketAuthMiddleware()(makeSocket(`sb_access_token=${token}`), next);
     expect(errors[0]?.message).toBe('Acesso negado');
   });
 
   it('rejeita token sem actor BARBERSHOP', () => {
     const token = jwt.sign({ sub: 'shop-1', actor: 'ADMIN' }, SECRET);
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(makeSocket(`sb_access_token=${token}`), next);
+    createSocketAuthMiddleware()(makeSocket(`sb_access_token=${token}`), next);
     expect(errors[0]?.message).toBe('Acesso negado');
   });
 
@@ -51,7 +55,7 @@ describe('Socket auth middleware', () => {
     const token = jwt.sign({ sub: 'shop-1', actor: 'BARBERSHOP' }, SECRET);
     const socket = makeSocket(`sb_access_token=${token}`);
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(socket, next);
+    createSocketAuthMiddleware()(socket, next);
     expect(errors[0]).toBeUndefined();
     expect(socket.data.barbershopId).toBe('shop-1');
   });
@@ -66,7 +70,7 @@ describe('Socket auth middleware', () => {
       data: {},
     } as unknown as Socket;
     const { errors, next } = makeNext();
-    createSocketAuthMiddleware(SECRET)(socket, next);
+    createSocketAuthMiddleware()(socket, next);
     expect(errors[0]).toBeUndefined();
     expect(socket.data.barbershopId).toBe('shop-1');
   });

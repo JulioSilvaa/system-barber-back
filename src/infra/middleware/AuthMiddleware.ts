@@ -1,13 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
+import { ITokenService } from '@/domain/repository/TokenService';
+import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import { ACCESS_COOKIE } from '@/infra/http/helpers/authCookie';
-
-interface IPayload {
-  sub: string;
-  actor?: 'USER' | 'BARBERSHOP' | 'ADMIN';
-}
 
 function paramString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) {
@@ -41,7 +37,12 @@ export function resolveBarbershop(barbershopRepository: IBarbershopRepository) {
   };
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  tokenService: ITokenService = new JwtTokenService(),
+) {
   const authHeader = req.headers.authorization;
   const cookieToken = (req.cookies as Record<string, string> | undefined)?.[ACCESS_COOKIE];
 
@@ -51,12 +52,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ message: 'Token não fornecido' });
   }
 
-  if (!process.env.JWT_ACCESS_SECRET) {
-    return res.status(500).json({ message: 'Erro de configuração do servidor' });
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET) as IPayload;
+    const decoded = tokenService.verify(token, 'access');
 
     req.userId = decoded.sub;
     req.actor = decoded.actor ?? 'USER';
