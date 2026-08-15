@@ -3,6 +3,7 @@ import ICommissionRepository from '@/domain/repository/CommissionRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
+import { timeToMinutes } from '@/application/useCases/appointment/workingHours';
 
 export type FinancialDashboardDTO = {
   period: {
@@ -186,11 +187,6 @@ function minutesPerDay(wh: {
     return 0;
   }
   return Math.max(0, timeToMinutes(wh.closeTime) - timeToMinutes(wh.openTime));
-}
-
-function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
 }
 
 function startOfWeek(date: Date): Date {

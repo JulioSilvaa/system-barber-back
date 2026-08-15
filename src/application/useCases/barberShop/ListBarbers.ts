@@ -16,13 +16,12 @@ export default class ListBarbersUseCase {
   async execute(barbershopId: string): Promise<PublicBarberDTO[]> {
     const memberships = await this.userBarbershopRepository.findActiveByBarbershop(barbershopId);
     const barbers = memberships.filter(membership => membership.localRole === 'BARBER');
-    const users = await Promise.all(
-      barbers.map(membership => this.userRepository.findById(membership.userId)),
-    );
+    const users = await this.userRepository.findByIds(barbers.map(membership => membership.userId));
+    const userById = new Map(users.map(user => [user.id, user]));
 
-    return barbers.map((membership, index) => ({
+    return barbers.map(membership => ({
       id: membership.userId,
-      name: users[index]?.name ?? 'Desconhecido',
+      name: userById.get(membership.userId)?.name ?? 'Desconhecido',
       localRole: membership.localRole,
     }));
   }

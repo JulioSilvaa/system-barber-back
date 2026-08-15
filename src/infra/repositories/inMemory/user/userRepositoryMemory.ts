@@ -24,6 +24,10 @@ export default class UserRepositoryMemory implements IUserRepository {
     return this.users.find(user => user.id === id) ?? null;
   }
 
+  async findByIds(ids: string[]): Promise<User[]> {
+    return this.users.filter(user => ids.includes(user.id));
+  }
+
   async delete(id: string): Promise<void> {
     const userIndex = this.users.findIndex(user => user.id === id);
     if (userIndex === -1) {

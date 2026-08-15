@@ -43,6 +43,11 @@ export default class UserRepositoryPrisma implements IUserRepository {
     return row ? toEntity(row) : null;
   }
 
+  async findByIds(ids: string[]): Promise<User[]> {
+    const rows = await this.prisma.user.findMany({ where: { id: { in: ids } } });
+    return rows.map(toEntity);
+  }
+
   async delete(id: string): Promise<void> {
     try {
       await this.prisma.user.delete({ where: { id } });

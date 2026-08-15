@@ -17,15 +17,16 @@ export default class ListBarbershopStaffUseCase {
 
   async execute(barbershopId: string): Promise<StaffMemberDTO[]> {
     const memberships = await this.userBarbershopRepository.findByBarbershop(barbershopId);
-    const users = await Promise.all(
-      memberships.map(membership => this.userRepository.findById(membership.userId)),
+    const users = await this.userRepository.findByIds(
+      memberships.map(membership => membership.userId),
     );
+    const userById = new Map(users.map(user => [user.id, user]));
 
     return memberships
-      .map((membership, index) => ({
+      .map(membership => ({
         userId: membership.userId,
-        name: users[index]?.name ?? 'Desconhecido',
-        phone: users[index]?.phone,
+        name: userById.get(membership.userId)?.name ?? 'Desconhecido',
+        phone: userById.get(membership.userId)?.phone,
         localRole: membership.localRole,
         status: membership.status,
       }))

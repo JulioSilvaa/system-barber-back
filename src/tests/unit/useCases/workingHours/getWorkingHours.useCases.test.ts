@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import GetWorkingHoursUseCase, {
-  DEFAULT_WORKING_HOURS,
-} from '@/application/useCases/workingHours/Get';
+import GetWorkingHoursUseCase from '@/application/useCases/workingHours/Get';
+import { DEFAULT_WORKING_HOURS } from '@/application/useCases/appointment/workingHours';
 import { WorkingHours } from '@/domain/entities/WorkingHours';
 import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 

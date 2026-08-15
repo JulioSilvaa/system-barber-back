@@ -12,7 +12,6 @@ import {
   resolveWorkingHours,
   timeToMinutes,
 } from '@/application/useCases/appointment/workingHours';
-import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 
 export type CreateAppointmentInputDTO = {
   barbershopId: string;
@@ -31,8 +30,8 @@ export default class CreateAppointmentUseCase {
     private readonly serviceRepository: IServiceRepository,
     private readonly userBarbershopRepository: IUserBarbershopRepository,
     private readonly customerRepository: ICustomerRepository,
+    private readonly workingHoursRepository: IWorkingHoursRepository,
     private readonly auditService?: AuditService,
-    private readonly workingHoursRepository: IWorkingHoursRepository = new WorkingHoursRepositoryMemory(),
   ) {}
 
   async execute(input: CreateAppointmentInputDTO, auditCtx?: AuditContext): Promise<Appointment> {

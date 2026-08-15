@@ -45,8 +45,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       serviceRepository,
       userBarbershopRepository,
       customerRepository,
-      undefined,
-      workingHoursRepository,
+      workingHoursRepository ?? new WorkingHoursRepositoryMemory(),
     );
 
   beforeEach(async () => {
