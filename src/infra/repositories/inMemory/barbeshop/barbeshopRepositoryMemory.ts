@@ -27,10 +27,6 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
     return this.barbershops.find(barbershop => barbershop.id === id) ?? null;
   }
 
-  async findAll(): Promise<Barbershop[]> {
-    return this.barbershops;
-  }
-
   async setActive(id: string, isActive: boolean): Promise<Barbershop | null> {
     const index = this.barbershops.findIndex(barbershop => barbershop.id === id);
 

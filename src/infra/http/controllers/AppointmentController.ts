@@ -114,7 +114,16 @@ export default class AppointmentController {
 
       const enriched = await this.enrich([output]);
 
-      emitToBarbershop(output.barbershopId, 'appointment:created', enriched[0]);
+      emitToBarbershop(output.barbershopId, 'appointment:created', {
+        id: enriched[0].id,
+        barbershopId: enriched[0].barbershopId,
+        barberId: enriched[0].barberId,
+        customerName: enriched[0].customerName,
+        serviceName: enriched[0].serviceName,
+        durationMinutes: enriched[0].durationMinutes,
+        startDate: enriched[0].startDate,
+        status: enriched[0].status,
+      });
 
       return res.status(201).json(enriched[0]);
     } catch (error) {

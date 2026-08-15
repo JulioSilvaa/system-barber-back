@@ -19,6 +19,7 @@ import createEvaluationRoutes from '../routes/evaluationRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import { createSwaggerRouter } from './swagger';
 import { UPLOADS_DIR } from '@/infra/http/helpers/logoUpload';
+import { isOriginAllowed } from '@/infra/http/helpers/cors';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import AuditService from '@/application/services/AuditService';
@@ -34,23 +35,10 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
   app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-  ];
-  const extraOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
-  const allowedOrigins = [...defaultOrigins, ...extraOrigins];
-
   app.use(
     cors({
       origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (isOriginAllowed(origin ?? undefined)) {
           return callback(null, true);
         }
         return callback(new Error('Not allowed by CORS'));

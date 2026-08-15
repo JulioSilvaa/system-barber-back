@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express';
 
 import AuditService from '@/application/services/AuditService';
 import CreateBarberShopUseCase from '@/application/useCases/barberShop/Create';
-import ListBarbershopsUseCase from '@/application/useCases/barberShop/List';
 import ListBarbersUseCase from '@/application/useCases/barberShop/ListBarbers';
 import ListBarbershopStaffUseCase from '@/application/useCases/barberShop/ListBarbershopStaff';
 import UpdateBarbershopStatusUseCase from '@/application/useCases/barberShop/UpdateBarbershopStatus';
@@ -39,7 +38,6 @@ type BarbershopOutputDTO = {
 export default class BarbershopController {
   private readonly barbershopRepository: IBarbershopRepository;
   private readonly createBarbershopUseCase: CreateBarberShopUseCase;
-  private readonly listBarbershopsUseCase: ListBarbershopsUseCase;
   private readonly listBarbersUseCase: ListBarbersUseCase;
   private readonly listBarbershopStaffUseCase: ListBarbershopStaffUseCase;
   private readonly updateBarbershopStatusUseCase: UpdateBarbershopStatusUseCase;
@@ -61,7 +59,6 @@ export default class BarbershopController {
       hashService,
       auditService,
     );
-    this.listBarbershopsUseCase = new ListBarbershopsUseCase(barbershopRepository);
     this.authenticateBarbershopUseCase = new AuthenticateBarbershopUseCase(
       barbershopRepository,
       hashService,
@@ -96,16 +93,6 @@ export default class BarbershopController {
       next(error);
     }
   };
-
-  list = async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const barbershops = await this.listBarbershopsUseCase.execute();
-      return res.status(200).json(barbershops.map(toBarbershopOutput));
-    } catch (error) {
-      next(error);
-    }
-  };
-
   getPublic = async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.barbershopId) {

@@ -4,7 +4,6 @@ export interface IBarbershopRepository {
   findById(id: string): Promise<Barbershop | null>;
   findBySlug(slug: string): Promise<Barbershop | null>;
   findByEmail(email: string): Promise<Barbershop | null>;
-  findAll(): Promise<Barbershop[]>;
   save(barbershop: Barbershop): Promise<Barbershop>;
   setActive(id: string, isActive: boolean): Promise<Barbershop | null>;
   update(

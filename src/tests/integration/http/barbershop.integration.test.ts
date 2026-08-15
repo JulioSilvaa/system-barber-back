@@ -88,16 +88,14 @@ describe('Barbershop HTTP Integration', () => {
   });
 
   describe('GET /api/barbershops', () => {
-    it('deve listar as barbearias cadastradas publicamente', async () => {
+    it('não expõe a lista pública de barbearias', async () => {
       const app = createApp();
 
       await request(app).post('/api/barbershops').send(barbershopPayload);
 
       const response = await request(app).get('/api/barbershops');
 
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body).toHaveLength(1);
+      expect(response.status).toBe(404);
     });
   });
 

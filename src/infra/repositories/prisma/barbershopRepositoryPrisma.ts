@@ -39,11 +39,6 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
     return row ? toEntity(row) : null;
   }
 
-  async findAll(): Promise<Barbershop[]> {
-    const rows = await this.prisma.barbershop.findMany({ orderBy: { createdAt: 'asc' } });
-    return rows.map(toEntity);
-  }
-
   async save(barbershop: Barbershop): Promise<Barbershop> {
     const data = {
       id: barbershop.id,
