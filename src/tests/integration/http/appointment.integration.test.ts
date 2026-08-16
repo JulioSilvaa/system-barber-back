@@ -1,7 +1,10 @@
 import type { Application } from 'express';
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import { createApp } from '@/infra/http/express/app';
+import { createMemoryRepositorySet } from '@/infra/repositories/factory';
+import { Appointment, Customer, Service } from '@/domain/entities';
 import { getAccessToken } from '@/tests/helpers/auth';
 
 describe('Appointment HTTP Integration', () => {
@@ -301,7 +304,89 @@ describe('Appointment HTTP Integration', () => {
     });
   });
 
-  describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete e cancel', () => {
+  describe('GET /api/barbershops/:barbershopId/ai/inactive-clients', () => {
+    it('deve listar clientes sem atendimento há mais de 30 dias', async () => {
+      const repositories = createMemoryRepositorySet();
+      const app = createApp({ repositories });
+      const barbershop = await createBarbershop(app, 'barbearia-ia', 'Barbearia IA');
+
+      const service = new Service({
+        id: randomUUID(),
+        barbershopId: barbershop.id,
+        name: 'Corte de cabelo',
+        priceCents: 6000,
+        durationMinutes: 30,
+      });
+      await repositories.serviceRepository.save(service);
+
+      const customer = new Customer({
+        id: randomUUID(),
+        barbershopId: barbershop.id,
+        name: 'Pedro Henrique',
+        phone: '11987654321',
+      });
+      await repositories.customerRepository.save(customer);
+
+      const startDate = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
+      await repositories.appointmentRepository.save(
+        new Appointment({
+          id: randomUUID(),
+          barbershopId: barbershop.id,
+          barberId: randomUUID(),
+          serviceId: service.id,
+          customerId: customer.id,
+          startDate,
+          endDate: new Date(startDate.getTime() + 30 * 60 * 1000),
+          status: 'COMPLETED',
+          pricePaidCents: 6000,
+          paymentMethod: 'PIX',
+        }),
+      );
+
+      const response = await request(app)
+        .get(`/api/barbershops/${barbershop.id}/ai/inactive-clients`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toEqual(
+        expect.objectContaining({
+          id: customer.id,
+          name: 'Pedro Henrique',
+          phone: '11987654321',
+          lastService: 'Corte de cabelo',
+          estimatedLostValueCents: 6000,
+          suggestedOffer: 'Corte + barba como cortesia de retorno',
+        }),
+      );
+      expect(response.body[0].lastVisitDays).toBeGreaterThan(30);
+    });
+
+    it('deve retornar lista vazia quando não há clientes inativos', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-ia-vazia', 'Barbearia IA Vazia');
+
+      const response = await request(app)
+        .get(`/api/barbershops/${barbershop.id}/ai/inactive-clients`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    });
+
+    it('deve retornar 401 sem token de autenticação', async () => {
+      const app = createApp();
+      const barbershop = await createBarbershop(app, 'barbearia-ia-401', 'Barbearia IA 401');
+
+      const response = await request(app).get(
+        `/api/barbershops/${barbershop.id}/ai/inactive-clients`,
+      );
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete, cancel e confirm', () => {
     async function createAppointment(app: Application) {
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
       const barber = await createBarber(app, barbershop.id, barbershop.token);
@@ -369,6 +454,83 @@ describe('Appointment HTTP Integration', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(expect.objectContaining({ status: 'CANCELLED' }));
+    });
+
+    it('deve confirmar um agendamento', async () => {
+      const app = createApp();
+      const { barbershop, appointment } = await createAppointment(app);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(expect.objectContaining({ status: 'CONFIRMED' }));
+    });
+
+    it('deve ser idempotente ao confirmar um agendamento já confirmado', async () => {
+      const app = createApp();
+      const { barbershop, appointment } = await createAppointment(app);
+
+      const first = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      const second = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(first.body.status).toBe('CONFIRMED');
+      expect(second.body.status).toBe('CONFIRMED');
+    });
+
+    it('deve permitir concluir um agendamento confirmado', async () => {
+      const app = createApp();
+      const { barbershop, appointment } = await createAppointment(app);
+
+      await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
+        .set('Authorization', `Bearer ${barbershop.token}`)
+        .send({ paidPriceCents: 4000, paymentMethod: 'PIX' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(expect.objectContaining({ status: 'COMPLETED' }));
+    });
+
+    it('deve retornar 400 ao confirmar um agendamento já cancelado', async () => {
+      const app = createApp();
+      const { barbershop, appointment } = await createAppointment(app);
+
+      await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(expect.objectContaining({ message: 'appointment canceled' }));
+    });
+
+    it('deve retornar 404 ao confirmar um agendamento inexistente', async () => {
+      const app = createApp();
+      const { barbershop } = await createAppointment(app);
+
+      const response = await request(app)
+        .patch(`/api/barbershops/${barbershop.id}/appointments/inexistente/confirm`)
+        .set('Authorization', `Bearer ${barbershop.token}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual(
+        expect.objectContaining({ message: 'Agendamento não encontrado' }),
+      );
     });
 
     it('deve retornar 400 ao concluir um agendamento já cancelado', async () => {

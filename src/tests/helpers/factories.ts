@@ -44,7 +44,7 @@ export type AppointmentProps = {
   customerId: string;
   startDate: Date;
   endDate: Date;
-  status?: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  status?: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
   pricePaidCents?: number | null;
   paymentMethod?: 'PIX' | 'CARD' | 'CASH' | null;
 };

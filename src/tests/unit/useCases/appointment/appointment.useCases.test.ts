@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import CreateAppointmentUseCase from '@/application/useCases/appointment/Create';
 import CompleteAppointmentUseCase from '@/application/useCases/appointment/Complete';
 import CancelAppointmentUseCase from '@/application/useCases/appointment/Cancel';
+import ConfirmAppointmentUseCase from '@/application/useCases/appointment/Confirm';
+import ListInactiveClientsUseCase from '@/application/useCases/appointment/ListInactiveClients';
 import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListDay';
 import { Appointment } from '@/domain/entities/Appointment';
+import { Customer } from '@/domain/entities/Customer';
 import { Service } from '@/domain/entities/Service';
 import { Barbershop } from '@/domain/entities/Barbershop';
 import { UserBarbershop } from '@/domain/entities';
@@ -346,6 +349,247 @@ describe('Appointment Use Cases Unit Tests', () => {
     });
   });
 
+  describe('ConfirmAppointmentUseCase', () => {
+    const makeConfirmUseCase = () => new ConfirmAppointmentUseCase(appointmentRepository);
+
+    const saveAppointment = (props: Parameters<typeof makeAppointmentProps>[0]) =>
+      appointmentRepository.save(new Appointment(makeAppointmentProps(props)));
+
+    it('deve confirmar um agendamento agendado', async () => {
+      await saveAppointment({
+        id: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        barberId: BARBER_ID,
+        serviceId: SERVICE_ID,
+      });
+
+      const output = await makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID);
+
+      expect(output.status).toBe('CONFIRMED');
+    });
+
+    it('deve ser idempotente ao confirmar um agendamento já confirmado', async () => {
+      await saveAppointment({
+        id: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        barberId: BARBER_ID,
+        serviceId: SERVICE_ID,
+        status: 'CONFIRMED',
+      });
+
+      const output = await makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID);
+
+      expect(output.status).toBe('CONFIRMED');
+    });
+
+    it('deve lançar erro ao confirmar um agendamento cancelado', async () => {
+      await saveAppointment({
+        id: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        barberId: BARBER_ID,
+        serviceId: SERVICE_ID,
+        status: 'CANCELLED',
+      });
+
+      await expect(makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
+        'appointment canceled',
+      );
+    });
+
+    it('deve lançar erro ao confirmar um agendamento concluído', async () => {
+      await saveAppointment({
+        id: 'appointment-1',
+        barbershopId: BARBERSHOP_ID,
+        barberId: BARBER_ID,
+        serviceId: SERVICE_ID,
+        status: 'COMPLETED',
+      });
+
+      await expect(makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
+        'appointment already completed',
+      );
+    });
+
+    it('deve lançar erro quando o agendamento não existe', async () => {
+      await expect(makeConfirmUseCase().execute('inexistente', BARBERSHOP_ID)).rejects.toThrow(
+        'Agendamento não encontrado',
+      );
+    });
+  });
+
+  describe('ListInactiveClientsUseCase', () => {
+    const NOW = new Date('2026-08-16T12:00:00.000Z');
+
+    const makeUseCase = () =>
+      new ListInactiveClientsUseCase(appointmentRepository, customerRepository, serviceRepository);
+
+    const saveCustomer = (id: string, name: string, phone: string) =>
+      customerRepository.save(
+        new Customer({
+          id,
+          barbershopId: BARBERSHOP_ID,
+          name,
+          phone,
+        }),
+      );
+
+    const saveCompleted = (
+      id: string,
+      customerId: string,
+      startDate: Date,
+      pricePaidCents: number,
+    ) =>
+      appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id,
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+            customerId,
+            startDate,
+            endDate: new Date(startDate.getTime() + 30 * 60 * 1000),
+            status: 'COMPLETED',
+            pricePaidCents,
+            paymentMethod: 'PIX',
+          }),
+        ),
+      );
+
+    beforeEach(async () => {
+      await serviceRepository.save(
+        new Service({
+          id: SERVICE_ID,
+          barbershopId: BARBERSHOP_ID,
+          name: 'Corte de cabelo',
+          priceCents: 4000,
+          durationMinutes: 30,
+        }),
+      );
+    });
+
+    it('deve listar clientes inativos com dados enriquecidos, ordenados pelo tempo sem visitar', async () => {
+      await saveCustomer('customer-a', 'Pedro Henrique', '11987654321');
+      await saveCustomer('customer-b', 'Carlos Alberto', '11912345678');
+      await saveCustomer('customer-c', 'Rafael Souza', '11955554444');
+
+      await saveCompleted(
+        'appointment-a',
+        'customer-a',
+        new Date('2026-06-20T15:00:00.000Z'),
+        6000,
+      );
+      await saveCompleted(
+        'appointment-b',
+        'customer-b',
+        new Date('2026-07-01T10:00:00.000Z'),
+        5000,
+      );
+      await saveCompleted(
+        'appointment-c',
+        'customer-c',
+        new Date('2026-07-08T16:00:00.000Z'),
+        6000,
+      );
+
+      const result = await makeUseCase().execute(BARBERSHOP_ID, NOW);
+
+      expect(result.map(client => client.id)).toEqual(['customer-a', 'customer-b', 'customer-c']);
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          id: 'customer-a',
+          name: 'Pedro Henrique',
+          phone: '11987654321',
+          lastVisitDays: 56,
+          lastService: 'Corte de cabelo',
+          lastVisit: '2026-06-20T15:00:00.000Z',
+          estimatedLostValueCents: 6000,
+        }),
+      );
+      expect(result[1].lastVisitDays).toBe(46);
+      expect(result[2].lastVisitDays).toBe(38);
+    });
+
+    it('deve excluir clientes com agendamento futuro', async () => {
+      await saveCustomer('customer-futuro', 'Quem Voltou', '11911112222');
+
+      await saveCompleted(
+        'appointment-old',
+        'customer-futuro',
+        new Date('2026-06-10T14:00:00.000Z'),
+        4000,
+      );
+      await appointmentRepository.save(
+        new Appointment(
+          makeAppointmentProps({
+            id: 'appointment-future',
+            barbershopId: BARBERSHOP_ID,
+            barberId: BARBER_ID,
+            serviceId: SERVICE_ID,
+            customerId: 'customer-futuro',
+            startDate: new Date('2026-08-20T14:00:00.000Z'),
+            endDate: new Date('2026-08-20T14:30:00.000Z'),
+            status: 'SCHEDULED',
+          }),
+        ),
+      );
+
+      const result = await makeUseCase().execute(BARBERSHOP_ID, NOW);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('deve excluir clientes com atendimento recente', async () => {
+      await saveCustomer('customer-recente', 'Cliente Recente', '11922223333');
+      await saveCompleted(
+        'appointment-recente',
+        'customer-recente',
+        new Date('2026-08-01T14:00:00.000Z'),
+        4000,
+      );
+
+      const result = await makeUseCase().execute(BARBERSHOP_ID, NOW);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('deve calcular o ticket médio e sugerir ofertas conforme as regras', async () => {
+      await saveCustomer('customer-premium', 'Cliente Premium', '11933334444');
+      await saveCustomer('customer-60dias', 'Cliente Antigo', '11944445555');
+
+      await saveCompleted(
+        'appointment-premium',
+        'customer-premium',
+        new Date('2026-07-10T14:00:00.000Z'),
+        8500,
+      );
+      await saveCompleted(
+        'appointment-60dias',
+        'customer-60dias',
+        new Date('2026-05-01T14:00:00.000Z'),
+        4000,
+      );
+
+      const result = await makeUseCase().execute(BARBERSHOP_ID, NOW);
+
+      const premium = result.find(client => client.id === 'customer-premium');
+      const antigo = result.find(client => client.id === 'customer-60dias');
+
+      expect(premium).toEqual(
+        expect.objectContaining({
+          estimatedLostValueCents: 8500,
+          suggestedOffer: 'Oferta de retorno com 15% de desconto no próximo corte',
+        }),
+      );
+      expect(antigo).toEqual(
+        expect.objectContaining({
+          lastVisitDays: 106,
+          suggestedOffer: 'Convite para uma visita expressa',
+        }),
+      );
+    });
+  });
+
   describe('ListDayAppointmentsUseCase', () => {
     it('deve listar apenas os agendamentos do dia', async () => {
       const useCase = new ListDayAppointmentsUseCase(appointmentRepository);
@@ -387,7 +631,10 @@ describe('Appointment Use Cases Unit Tests', () => {
 
     it('deve rejeitar agendamento quando o dia está fechado', async () => {
       const useCase = makeCreateUseCase(workingHoursRepository);
-      const date = new Date('2026-08-16T14:00:00.000Z'); // domingo
+      const now = new Date();
+      const date = new Date(now);
+      date.setDate(now.getDate() + ((7 - now.getDay()) % 7) + 7);
+      date.setHours(14, 0, 0, 0); // próximo domingo, no futuro
 
       await workingHoursRepository.save(
         new WorkingHours({
