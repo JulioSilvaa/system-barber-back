@@ -12,6 +12,7 @@ import IUserBarbershopRepository from '@/domain/repository/UserBarbershopReposit
 import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursRepository';
 import IFinanceEntryRepository from '@/domain/repository/FinanceEntryRepository';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
+import IUserRepository from '@/domain/repository/UserRepository';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
@@ -19,6 +20,7 @@ import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBa
 import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 import FinanceEntryRepositoryMemory from '@/infra/repositories/inMemory/financeEntry/financeEntryRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
+import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 
 export default class FinancialController {
   private readonly getFinancialDashboardUseCase: GetFinancialDashboardUseCase;
@@ -33,6 +35,7 @@ export default class FinancialController {
     financeEntryRepository: IFinanceEntryRepository = new FinanceEntryRepositoryMemory(),
     barbershopRepository: IBarbershopRepository = new BarbershopRepositoryMemory(),
     serviceRepository: IServiceRepository = new ServiceRepositoryMemory(),
+    userRepository: IUserRepository = new UserRepositoryMemory(),
   ) {
     this.getFinancialDashboardUseCase = new GetFinancialDashboardUseCase(
       appointmentRepository,
@@ -40,6 +43,7 @@ export default class FinancialController {
       userBarbershopRepository,
       workingHoursRepository,
       serviceRepository,
+      userRepository,
     );
     this.addFinanceEntryUseCase = new AddFinanceEntryUseCase(
       financeEntryRepository,

@@ -57,12 +57,26 @@ export default class UserController {
           throw new ValidationError('Vínculo já existente');
         }
 
+        const commissionRateRaw = req.body.commissionRate;
+        let commissionRate: number | null = null;
+        if (
+          commissionRateRaw !== undefined &&
+          commissionRateRaw !== null &&
+          commissionRateRaw !== ''
+        ) {
+          commissionRate = Number(commissionRateRaw);
+          if (!Number.isInteger(commissionRate) || commissionRate < 0 || commissionRate > 100) {
+            throw new ValidationError('Percentual de comissão deve estar entre 0 e 100');
+          }
+        }
+
         const membership = await this.userBarbershopRepository.save(
           new UserBarbershop({
             id: randomUUID(),
             userId: output.id,
             barbershopId,
             localRole: 'BARBER',
+            commissionRate,
           }),
         );
 

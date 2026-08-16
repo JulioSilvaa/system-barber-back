@@ -1,7 +1,7 @@
 import { ValidationError } from '@/domain/errors';
 export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 
-export type AppointmentPaymentMethod = 'PIX' | 'CARD' | 'CASH';
+export type AppointmentPaymentMethod = 'PIX' | 'CASH' | 'DEBIT' | 'CREDIT';
 
 export type AppointmentProps = {
   id: string;
@@ -85,7 +85,7 @@ export class Appointment {
       throw new ValidationError('Valor da cobrança é obrigatório');
     }
 
-    if (!['PIX', 'CARD', 'CASH'].includes(payment.paymentMethod)) {
+    if (!['PIX', 'CASH', 'DEBIT', 'CREDIT'].includes(payment.paymentMethod)) {
       throw new ValidationError('Forma de pagamento inválida');
     }
 

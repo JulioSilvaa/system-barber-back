@@ -9,6 +9,7 @@ import { IWorkingHoursRepository } from '@/domain/repository/WorkingHoursReposit
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import IFinanceEntryRepository from '@/domain/repository/FinanceEntryRepository';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
+import IUserRepository from '@/domain/repository/UserRepository';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import CommissionRepositoryMemory from '@/infra/repositories/inMemory/commission/commissionRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
@@ -16,6 +17,7 @@ import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBa
 import WorkingHoursRepositoryMemory from '@/infra/repositories/inMemory/workingHours/workingHoursRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import FinanceEntryRepositoryMemory from '@/infra/repositories/inMemory/financeEntry/financeEntryRepositoryMemory';
+import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
 
 export interface FinanceRoutesDeps {
   appointmentRepository: IAppointmentRepository;
@@ -25,6 +27,7 @@ export interface FinanceRoutesDeps {
   barbershopRepository: IBarbershopRepository;
   financeEntryRepository: IFinanceEntryRepository;
   serviceRepository?: IServiceRepository;
+  userRepository?: IUserRepository;
 }
 
 export default function createFinanceRoutes(deps?: FinanceRoutesDeps) {
@@ -46,6 +49,7 @@ export default function createFinanceRoutes(deps?: FinanceRoutesDeps) {
     financeEntryRepository,
     barbershopRepository,
     deps?.serviceRepository ?? new ServiceRepositoryMemory(),
+    deps?.userRepository ?? new UserRepositoryMemory(),
   );
 
   router.get(
