@@ -9,6 +9,7 @@ export type BarbershopProps = {
   logoUrl?: string;
   isActive?: boolean;
   password: string;
+  reminderHoursBefore?: number;
 };
 
 export class Barbershop {
@@ -21,6 +22,7 @@ export class Barbershop {
   public readonly logoUrl?: string;
   public readonly isActive: boolean;
   public readonly password: string;
+  public readonly reminderHoursBefore: number;
 
   constructor(props: BarbershopProps) {
     this.validateSlug(props.slug);
@@ -37,6 +39,7 @@ export class Barbershop {
     this.logoUrl = props.logoUrl;
     this.isActive = props.isActive ?? true;
     this.password = props.password;
+    this.reminderHoursBefore = props.reminderHoursBefore ?? 24;
   }
 
   private validateSlug(slug: string): void {

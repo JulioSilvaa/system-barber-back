@@ -12,6 +12,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    include: ['src/**/*.test.ts'],
     env: {
       DB_DRIVER: 'memory',
       JWT_ACCESS_SECRET: 'test-secret',

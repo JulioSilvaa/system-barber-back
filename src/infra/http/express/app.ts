@@ -17,6 +17,8 @@ import createWorkingHoursRoutes from '../routes/workingHoursRoutes';
 import createUserRoutes from '../routes/userRoutes';
 import createFinanceRoutes from '../routes/financeRoutes';
 import createEvaluationRoutes from '../routes/evaluationRoutes';
+import createPushRoutes from '../routes/pushRoutes';
+import createReportRoutes from '../routes/reportRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import { createSwaggerRouter } from './swagger';
 import { UPLOADS_DIR } from '@/infra/http/helpers/logoUpload';
@@ -26,6 +28,7 @@ import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import AuditService from '@/application/services/AuditService';
 import { AppError } from '@/domain/errors';
 import { createRepositorySet, RepositorySet } from '@/infra/repositories/factory';
+import { getPrismaClient } from '@/infra/database/prisma';
 
 export function createApp(deps?: { repositories?: RepositorySet }) {
   const app = express();
@@ -167,6 +170,20 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       hashService,
       tokenService,
       auditService,
+    }),
+    createPushRoutes({
+      prisma: getPrismaClient(),
+      userBarbershopRepository,
+      barbershopRepository,
+    }),
+    createReportRoutes({
+      appointmentRepository,
+      financeEntryRepository,
+      commissionRepository,
+      userRepository,
+      customerRepository,
+      barbershopRepository,
+      userBarbershopRepository,
     }),
   );
   app.use('/', healthRoutes);

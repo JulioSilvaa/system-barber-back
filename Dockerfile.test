@@ -1,0 +1,11 @@
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN corepack enable && yarn install --frozen-lockfile
+
+FROM node:22-alpine AS test
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN yarn prisma:generate
+CMD ["npx", "vitest", "run", "--reporter=verbose"]

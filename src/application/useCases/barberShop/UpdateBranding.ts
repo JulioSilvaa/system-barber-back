@@ -8,6 +8,7 @@ export type UpdateBrandingInput = {
   name?: string;
   primaryColor?: string;
   logoUrl?: string;
+  reminderHoursBefore?: number;
 };
 
 export default class UpdateBrandingUseCase {
@@ -32,6 +33,9 @@ export default class UpdateBrandingUseCase {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
       ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+      ...(input.reminderHoursBefore !== undefined
+        ? { reminderHoursBefore: input.reminderHoursBefore }
+        : {}),
     });
     if (!updated) {
       throw new NotFoundError('Barbearia não encontrada');

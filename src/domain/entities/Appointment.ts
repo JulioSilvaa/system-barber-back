@@ -15,6 +15,7 @@ export type AppointmentProps = {
   pricePaidCents?: number | null;
   paymentMethod?: AppointmentPaymentMethod | null;
   note?: string | null;
+  reminderSent?: boolean;
 };
 
 export class Appointment {
@@ -29,6 +30,7 @@ export class Appointment {
   public pricePaidCents: number | null;
   public paymentMethod: AppointmentPaymentMethod | null;
   public note: string | null;
+  public reminderSent: boolean;
 
   constructor(props: AppointmentProps) {
     if (props.endDate <= props.startDate) {
@@ -46,6 +48,7 @@ export class Appointment {
     this.pricePaidCents = props.pricePaidCents ?? null;
     this.paymentMethod = props.paymentMethod ?? null;
     this.note = props.note ?? null;
+    this.reminderSent = props.reminderSent ?? false;
   }
 
   public isOverlappingWith(other: Appointment): boolean {
@@ -101,5 +104,9 @@ export class Appointment {
     }
 
     this.status = 'CANCELLED';
+  }
+
+  public markReminderSent(): void {
+    this.reminderSent = true;
   }
 }

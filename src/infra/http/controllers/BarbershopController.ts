@@ -34,6 +34,7 @@ type BarbershopOutputDTO = {
   primaryColor?: string;
   logoUrl?: string;
   isActive: boolean;
+  reminderHoursBefore: number;
 };
 
 export default class BarbershopController {
@@ -205,7 +206,7 @@ export default class BarbershopController {
   updateBranding = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const barbershopId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const { name, primaryColor, logoUrl } = req.body ?? {};
+      const { name, primaryColor, logoUrl, reminderHoursBefore } = req.body ?? {};
 
       if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
         throw new ValidationError('name must be a non-empty string');
@@ -229,6 +230,12 @@ export default class BarbershopController {
       ) {
         throw new ValidationError('logoUrl must point to an uploaded file');
       }
+      if (reminderHoursBefore !== undefined) {
+        const hours = Number(reminderHoursBefore);
+        if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
+          throw new ValidationError('reminderHoursBefore must be an integer between 1 and 168');
+        }
+      }
 
       const barbershop = await this.updateBrandingUseCase.execute(
         {
@@ -236,6 +243,9 @@ export default class BarbershopController {
           ...(name !== undefined ? { name: name.trim() } : {}),
           ...(primaryColor !== undefined ? { primaryColor } : {}),
           ...(logoUrl !== undefined ? { logoUrl } : {}),
+          ...(reminderHoursBefore !== undefined
+            ? { reminderHoursBefore: Number(reminderHoursBefore) }
+            : {}),
         },
         buildAuditContext(req),
       );
@@ -280,5 +290,6 @@ function toBarbershopOutput(barbershop: Barbershop): BarbershopOutputDTO {
     primaryColor: barbershop.primaryColor,
     logoUrl: barbershop.logoUrl,
     isActive: barbershop.isActive,
+    reminderHoursBefore: barbershop.reminderHoursBefore,
   };
 }

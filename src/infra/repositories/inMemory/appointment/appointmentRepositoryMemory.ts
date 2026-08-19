@@ -53,6 +53,20 @@ export default class AppointmentRepositoryMemory implements IAppointmentReposito
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   }
 
+  async findPendingReminders(barbershopId: string, horizon: Date): Promise<Appointment[]> {
+    const now = new Date();
+    return this.appointments
+      .filter(
+        appointment =>
+          appointment.barbershopId === barbershopId &&
+          ['SCHEDULED', 'CONFIRMED'].includes(appointment.status) &&
+          !appointment.reminderSent &&
+          appointment.startDate > now &&
+          appointment.startDate <= horizon,
+      )
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+  }
+
   async save(appointment: Appointment): Promise<Appointment> {
     const existingIndex = this.appointments.findIndex(item => item.id === appointment.id);
 

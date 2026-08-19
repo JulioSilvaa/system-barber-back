@@ -13,6 +13,7 @@ function toEntity(row: PrismaBarbershop): Barbershop {
     primaryColor: row.primaryColor ?? undefined,
     logoUrl: row.logoUrl ?? undefined,
     isActive: row.isActive,
+    reminderHoursBefore: row.reminderHoursBefore,
   });
 }
 
@@ -77,7 +78,7 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
 
   async update(
     id: string,
-    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl' | 'reminderHoursBefore'>>,
   ): Promise<Barbershop | null> {
     const result = await this.prisma.barbershop.updateMany({
       where: { id },
@@ -85,6 +86,9 @@ export default class BarbershopRepositoryPrisma implements IBarbershopRepository
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.primaryColor !== undefined ? { primaryColor: data.primaryColor } : {}),
         ...(data.logoUrl !== undefined ? { logoUrl: data.logoUrl } : {}),
+        ...(data.reminderHoursBefore !== undefined
+          ? { reminderHoursBefore: data.reminderHoursBefore }
+          : {}),
       },
     });
 

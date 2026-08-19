@@ -8,6 +8,6 @@ export interface IBarbershopRepository {
   setActive(id: string, isActive: boolean): Promise<Barbershop | null>;
   update(
     id: string,
-    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl' | 'reminderHoursBefore'>>,
   ): Promise<Barbershop | null>;
 }

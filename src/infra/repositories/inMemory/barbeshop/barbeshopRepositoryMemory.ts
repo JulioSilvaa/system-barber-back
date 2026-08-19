@@ -41,6 +41,7 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
       primaryColor: current.primaryColor,
       logoUrl: current.logoUrl,
       isActive,
+      reminderHoursBefore: current.reminderHoursBefore,
     });
 
     this.barbershops[index] = updated;
@@ -49,7 +50,7 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
 
   async update(
     id: string,
-    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl'>>,
+    data: Partial<Pick<Barbershop, 'name' | 'primaryColor' | 'logoUrl' | 'reminderHoursBefore'>>,
   ): Promise<Barbershop | null> {
     const index = this.barbershops.findIndex(barbershop => barbershop.id === id);
 
@@ -68,6 +69,7 @@ export default class BarbershopRepositoryMemory implements IBarbershopRepository
       primaryColor: data.primaryColor ?? current.primaryColor,
       logoUrl: data.logoUrl ?? current.logoUrl,
       isActive: current.isActive,
+      reminderHoursBefore: data.reminderHoursBefore ?? current.reminderHoursBefore,
     });
 
     this.barbershops[index] = updated;

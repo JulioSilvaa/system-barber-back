@@ -16,6 +16,7 @@ function toEntity(row: PrismaAppointment): Appointment {
     pricePaidCents: row.pricePaidCents,
     paymentMethod: row.paymentMethod as Appointment['paymentMethod'],
     note: row.note,
+    reminderSent: row.reminderSent,
   });
 }
 
@@ -76,6 +77,20 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
     return rows.map(toEntity);
   }
 
+  async findPendingReminders(barbershopId: string, horizon: Date): Promise<Appointment[]> {
+    const now = new Date();
+    const rows = await this.prisma.appointment.findMany({
+      where: {
+        barbershopId,
+        status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        reminderSent: false,
+        startDate: { gt: now, lte: horizon },
+      },
+      orderBy: { startDate: 'asc' },
+    });
+    return rows.map(toEntity);
+  }
+
   async save(appointment: Appointment): Promise<Appointment> {
     const data = {
       id: appointment.id,
@@ -89,6 +104,7 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
       pricePaidCents: appointment.pricePaidCents,
       paymentMethod: appointment.paymentMethod,
       note: appointment.note,
+      reminderSent: appointment.reminderSent,
     };
 
     await this.prisma.appointment.upsert({

@@ -43,19 +43,25 @@ model Barbershop {
   email         String                 @unique
   phone         String
   password      String
-  primaryColor  String?
-  logoUrl       String?
-  isActive      Boolean                @default(true)
+  primaryColor        String?
+  logoUrl             String?
+  reminderHoursBefore Int                  @default(24)
+  isActive            Boolean              @default(true)
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
-  memberships   UserBarbershop[]
-  services      Service[]
-  appointments  Appointment[]
-  customers     Customer[]
-  workingHours  WorkingHours[]
-  commissions   Commission[]
-  evaluations   Evaluation[]
+  memberships    UserBarbershop[]
+  services       Service[]
+  appointments   Appointment[]
+  customers      Customer[]
+  workingHours   WorkingHours[]
+  commissions    Commission[]
+  evaluations    Evaluation[]
   financeEntries FinanceEntry[]
+  subscriptions  Subscription[]
+  featureFlags   FeatureFlag[]
+  integrations   Integration[]
+  aiSettings     AiSettings?
+  pushSubscriptions PushSubscription[]
 
   @@map("barbershops")
 }
@@ -103,6 +109,7 @@ model Appointment {
   pricePaidCents Int?
   paymentMethod  String?
   note           String?
+  reminderSent   Boolean              @default(false)
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   barbershop     Barbershop           @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
@@ -221,4 +228,87 @@ model FinanceEntry {
   @@index([barbershopId])
   @@index([appointmentId])
   @@map("finance_entries")
+}
+
+model Subscription {
+  id                     String      @id
+  barbershopId           String      @unique
+  plan                   String      @default("BASIC")
+  status                 String      @default("ACTIVE")
+  mrrCents               Int         @default(0)
+  provider               String      @default("MANUAL")
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  billingType            String?
+  billingCycleDay        Int?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  barbershop             Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model FeatureFlag {
+  id           String     @id
+  barbershopId String
+  module       String
+  enabled      Boolean
+  source       String     @default("PLAN")
+  updatedBy    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@unique([barbershopId, module])
+  @@map("feature_flags")
+}
+
+model Integration {
+  id              String     @id
+  barbershopId    String
+  provider        String
+  encryptedToken  String
+  tokenIv         String
+  tokenTag        String
+  tokenExpiresAt  DateTime?
+  instagramUserId String?
+  status          String     @default("CONNECTED")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  barbershop      Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@unique([barbershopId, provider])
+  @@map("integrations")
+}
+
+model AiSettings {
+  id                    String    @id
+  barbershopId          String    @unique
+  followUpDays          Int       @default(30)
+  autoSend              Boolean   @default(false)
+  messageTemplate       String    @default("Olá, {nome}! Faz algum tempo que você não passa por aqui. Quer reservar seu horário? A gente te espera!")
+  confirmationTemplate  String    @default("Olá, {nome}! Seu agendamento para {data} às {hora} está confirmado. Até lá!")
+  cancellationTemplate  String    @default("Olá, {nome}. Recebemos o cancelamento do seu agendamento em {data}. Se quiser reagendar, é só chamar!")
+  updatedAt             DateTime  @updatedAt
+  barbershop            Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@map("ai_settings")
+}
+
+model PushSubscription {
+  id           String     @id @default(cuid())
+  barbershopId String
+  endpoint     String
+  p256dh       String
+  auth         String
+  userAgent    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@unique([barbershopId, endpoint])
+  @@index([endpoint])
+  @@map("push_subscriptions")
 }
