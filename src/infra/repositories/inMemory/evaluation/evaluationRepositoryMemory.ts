@@ -14,8 +14,10 @@ export default class EvaluationRepositoryMemory implements IEvaluationRepository
     return evaluation;
   }
 
-  async findByAppointment(appointmentId: string): Promise<Evaluation | null> {
-    return this.evaluations.find(evaluation => evaluation.appointmentId === appointmentId) ?? null;
+  async findByAppointment(appointmentId: string, barbershopId: string): Promise<Evaluation | null> {
+    return this.evaluations.find(
+      evaluation => evaluation.appointmentId === appointmentId && evaluation.barbershopId === barbershopId,
+    ) ?? null;
   }
 
   async findByBarbershop(barbershopId: string): Promise<Evaluation[]> {

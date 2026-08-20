@@ -56,7 +56,7 @@ export default class ListInactiveClientsUseCase {
       return [];
     }
 
-    const customers = await this.customerRepository.findByIds(candidates.map(c => c.customerId));
+    const customers = await this.customerRepository.findByIds(candidates.map(c => c.customerId), barbershopId);
     const customerById = new Map(customers.map(customer => [customer.id, customer]));
 
     const serviceIds = new Set(appointments.map(appointment => appointment.serviceId));

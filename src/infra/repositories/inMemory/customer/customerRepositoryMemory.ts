@@ -26,8 +26,10 @@ export default class CustomerRepositoryMemory implements ICustomerRepository {
     return this.customers.filter(customer => customer.barbershopId === barbershopId);
   }
 
-  async findByIds(ids: string[]): Promise<Customer[]> {
-    return this.customers.filter(customer => ids.includes(customer.id));
+  async findByIds(ids: string[], barbershopId: string): Promise<Customer[]> {
+    return this.customers.filter(
+      customer => ids.includes(customer.id) && customer.barbershopId === barbershopId,
+    );
   }
 
   async save(customer: Customer): Promise<Customer> {

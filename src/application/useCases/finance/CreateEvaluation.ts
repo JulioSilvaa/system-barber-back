@@ -31,7 +31,7 @@ export default class CreateEvaluationUseCase {
       throw new ValidationError('Apenas atendimentos concluídos podem ser avaliados');
     }
 
-    const existing = await this.evaluationRepository.findByAppointment(input.appointmentId);
+    const existing = await this.evaluationRepository.findByAppointment(input.appointmentId, input.barbershopId);
     if (existing) {
       throw new AppError('Este atendimento já foi avaliado', 'EVALUATION_ALREADY_EXISTS');
     }
@@ -62,7 +62,7 @@ export class GetEvaluationStatusUseCase {
 
   async execute(barbershopId: string, appointmentId: string): Promise<EvaluationStatusDTO> {
     const appointment = await this.appointmentRepository.findById(appointmentId, barbershopId);
-    const existing = await this.evaluationRepository.findByAppointment(appointmentId);
+    const existing = await this.evaluationRepository.findByAppointment(appointmentId, barbershopId);
 
     return {
       canEvaluate: Boolean(appointment && appointment.status === 'COMPLETED' && !existing),

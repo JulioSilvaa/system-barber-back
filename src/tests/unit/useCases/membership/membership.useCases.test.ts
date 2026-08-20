@@ -261,7 +261,7 @@ describe('Membership Use Cases Unit Tests', () => {
         membershipId: 'membership-1',
       });
 
-      expect(await userBarbershopRepository.findById('membership-1')).toBeNull();
+      expect(await userBarbershopRepository.findById('membership-1', barbershop1.id)).toBeNull();
       expect(auditRepository.list()).toHaveLength(1);
       expect(auditRepository.list()[0]).toEqual(
         expect.objectContaining({

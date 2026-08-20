@@ -1,5 +1,6 @@
 import { Service } from '@/domain/entities/Service';
 import { IServiceRepository } from '@/domain/repository/ServiceRepository';
+import { NotFoundError } from '@/domain/errors';
 import type { PrismaClient, Service as PrismaService } from '@/generated/prisma/client';
 
 function toEntity(row: PrismaService): Service {
@@ -51,6 +52,14 @@ export default class ServiceRepositoryPrisma implements IServiceRepository {
   }
 
   async update(service: Service): Promise<Service> {
+    const existing = await this.prisma.service.findFirst({
+      where: { id: service.id, barbershopId: service.barbershopId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Serviço não encontrado');
+    }
+
     await this.prisma.service.update({
       where: { id: service.id },
       data: {

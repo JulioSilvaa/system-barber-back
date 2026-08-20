@@ -268,7 +268,7 @@ describe('Appointment Use Cases Unit Tests', () => {
         paymentMethod: 'CASH',
       });
 
-      const commission = await commissionRepository.findByAppointment('appointment-1');
+      const commission = await commissionRepository.findByAppointment('appointment-1', BARBERSHOP_ID);
       expect(commission).toMatchObject({
         commissionCents: 500,
         rate: 10,

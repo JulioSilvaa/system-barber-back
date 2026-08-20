@@ -50,9 +50,9 @@ export class CommissionRepositoryPrisma implements ICommissionRepository {
     return rows.map(toCommissionEntity);
   }
 
-  async findByAppointment(appointmentId: string): Promise<Commission | null> {
+  async findByAppointment(appointmentId: string, barbershopId: string): Promise<Commission | null> {
     const row = await this.prisma.commission.findFirst({
-      where: { appointmentId },
+      where: { appointmentId, barbershopId },
     });
     return row ? toCommissionEntity(row) : null;
   }

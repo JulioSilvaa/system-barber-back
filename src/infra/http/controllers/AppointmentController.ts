@@ -293,7 +293,10 @@ export default class AppointmentController {
 
   private async enrich(appointments: Appointment[]): Promise<AppointmentOutputDTO[]> {
     const customerIds = [...new Set(appointments.map(appointment => appointment.customerId))];
-    const customers = await this.customerRepository.findByIds(customerIds);
+    const barbershopId = appointments[0]?.barbershopId;
+    const customers = barbershopId
+      ? await this.customerRepository.findByIds(customerIds, barbershopId)
+      : [];
     const customerById = new Map(customers.map(customer => [customer.id, customer]));
 
     const serviceById = new Map<string, Service>();

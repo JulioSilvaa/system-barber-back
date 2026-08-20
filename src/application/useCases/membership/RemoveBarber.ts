@@ -14,7 +14,7 @@ export default class RemoveBarberUseCase {
   ) {}
 
   async execute(input: RemoveBarberInputDTO, auditCtx?: AuditContext): Promise<void> {
-    const membership = await this.userBarbershopRepository.findById(input.membershipId);
+    const membership = await this.userBarbershopRepository.findById(input.membershipId, input.barbershopId);
     if (!membership || membership.barbershopId !== input.barbershopId) {
       throw new NotFoundError('Vínculo não encontrado');
     }

@@ -6,6 +6,6 @@ export default interface IUserBarbershopRepository {
   findByUserAndBarbershop(userId: string, barbershopId: string): Promise<UserBarbershop | null>;
   findByBarbershop(barbershopId: string): Promise<UserBarbershop[]>;
   findActiveByBarbershop(barbershopId: string): Promise<UserBarbershop[]>;
-  findById(id: string): Promise<UserBarbershop | null>;
+  findById(id: string, barbershopId: string): Promise<UserBarbershop | null>;
   delete(id: string): Promise<void>;
 }

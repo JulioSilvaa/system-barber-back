@@ -39,13 +39,13 @@ export default class CustomerRepositoryPrisma implements ICustomerRepository {
     return rows.map(toEntity);
   }
 
-  async findByIds(ids: string[]): Promise<Customer[]> {
+  async findByIds(ids: string[], barbershopId: string): Promise<Customer[]> {
     if (ids.length === 0) {
       return [];
     }
 
     const rows = await this.prisma.customer.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, barbershopId },
     });
     return rows.map(toEntity);
   }

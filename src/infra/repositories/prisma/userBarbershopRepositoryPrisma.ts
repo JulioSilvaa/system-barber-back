@@ -74,8 +74,10 @@ export default class UserBarbershopRepositoryPrisma implements IUserBarbershopRe
     return rows.map(toEntity);
   }
 
-  async findById(id: string): Promise<UserBarbershop | null> {
-    const row = await this.prisma.userBarbershop.findUnique({ where: { id } });
+  async findById(id: string, barbershopId: string): Promise<UserBarbershop | null> {
+    const row = await this.prisma.userBarbershop.findFirst({
+      where: { id, barbershopId },
+    });
     return row ? toEntity(row) : null;
   }
 

@@ -31,8 +31,10 @@ export class EvaluationRepositoryPrisma implements IEvaluationRepository {
     return evaluation;
   }
 
-  async findByAppointment(appointmentId: string): Promise<Evaluation | null> {
-    const row = await this.prisma.evaluation.findUnique({ where: { appointmentId } });
+  async findByAppointment(appointmentId: string, barbershopId: string): Promise<Evaluation | null> {
+    const row = await this.prisma.evaluation.findFirst({
+      where: { appointmentId, barbershopId },
+    });
     return row ? toEvaluationEntity(row) : null;
   }
 

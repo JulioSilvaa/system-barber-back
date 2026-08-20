@@ -2,7 +2,7 @@ import { Evaluation } from '@/domain/entities';
 
 export interface IEvaluationRepository {
   save(evaluation: Evaluation): Promise<Evaluation>;
-  findByAppointment(appointmentId: string): Promise<Evaluation | null>;
+  findByAppointment(appointmentId: string, barbershopId: string): Promise<Evaluation | null>;
   findByBarbershop(barbershopId: string): Promise<Evaluation[]>;
 }
 
