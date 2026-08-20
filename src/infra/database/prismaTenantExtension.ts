@@ -10,7 +10,6 @@ const TENANT_MODELS = new Set([
   'financeEntry',
   'subscription',
   'featureFlag',
-  'integration',
   'aiSettings',
   'pushSubscription',
 ]);

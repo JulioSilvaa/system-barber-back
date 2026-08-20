@@ -59,7 +59,6 @@ model Barbershop {
   financeEntries FinanceEntry[]
   subscriptions  Subscription[]
   featureFlags   FeatureFlag[]
-  integrations   Integration[]
   aiSettings     AiSettings?
   pushSubscriptions PushSubscription[]
 
@@ -263,24 +262,6 @@ model FeatureFlag {
 
   @@unique([barbershopId, module])
   @@map("feature_flags")
-}
-
-model Integration {
-  id              String     @id
-  barbershopId    String
-  provider        String
-  encryptedToken  String
-  tokenIv         String
-  tokenTag        String
-  tokenExpiresAt  DateTime?
-  instagramUserId String?
-  status          String     @default("CONNECTED")
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  barbershop      Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-
-  @@unique([barbershopId, provider])
-  @@map("integrations")
 }
 
 model AiSettings {

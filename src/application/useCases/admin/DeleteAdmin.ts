@@ -22,6 +22,11 @@ export default class DeleteAdminUseCase {
       throw new NotFoundError('Admin não encontrado');
     }
 
+    const allAdmins = await this.adminRepository.list();
+    if (allAdmins.length <= 1) {
+      throw new ValidationError('Não é possível excluir o último admin');
+    }
+
     await this.adminRepository.delete(id);
 
     await this.auditService?.record({

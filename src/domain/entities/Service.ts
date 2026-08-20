@@ -61,6 +61,9 @@ export class Service {
     if (!this.name || this.name.trim() === '') {
       throw new ValidationError('Nome do serviço é obrigatório');
     }
+    if (this.name.length > 100) {
+      throw new ValidationError('Nome do serviço deve ter no máximo 100 caracteres');
+    }
     if (this.priceCents <= 0) {
       throw new ValidationError('price must be greater than zero');
     }

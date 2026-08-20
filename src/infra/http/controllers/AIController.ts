@@ -54,6 +54,16 @@ export default class AIController {
         throw new ValidationError('autoSend must be a boolean');
       }
 
+      for (const [key, val] of Object.entries({
+        messageTemplate,
+        confirmationTemplate,
+        cancellationTemplate,
+      })) {
+        if (val !== undefined && typeof val === 'string' && val.length > 1000) {
+          throw new ValidationError(`${key} must be at most 1000 characters`);
+        }
+      }
+
       const existing = await this.prisma.aiSettings.findUnique({
         where: { barbershopId },
       });

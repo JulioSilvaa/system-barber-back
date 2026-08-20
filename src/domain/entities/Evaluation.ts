@@ -45,5 +45,9 @@ export default class Evaluation {
     if (!Number.isInteger(this.rating) || this.rating < 1 || this.rating > 5) {
       throw new ValidationError('A avaliação deve ser uma nota entre 1 e 5');
     }
+
+    if (this.comment && this.comment.length > 500) {
+      throw new ValidationError('Comentário deve ter no máximo 500 caracteres');
+    }
   }
 }

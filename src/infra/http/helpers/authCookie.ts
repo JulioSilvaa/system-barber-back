@@ -9,7 +9,7 @@ export function setAuthCookies(res: Response, accessToken: string, refreshToken:
   res.cookie(ACCESS_COOKIE, accessToken, {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge: 30 * 60 * 1000,
     path: '/',
   });
@@ -17,7 +17,7 @@ export function setAuthCookies(res: Response, accessToken: string, refreshToken:
   res.cookie(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     secure,
-    sameSite: 'lax',
+    sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
