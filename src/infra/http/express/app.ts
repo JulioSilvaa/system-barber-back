@@ -19,6 +19,8 @@ import createFinanceRoutes from '../routes/financeRoutes';
 import createEvaluationRoutes from '../routes/evaluationRoutes';
 import createPushRoutes from '../routes/pushRoutes';
 import createReportRoutes from '../routes/reportRoutes';
+import createSubscriptionRoutes from '../routes/subscriptionRoutes';
+import createAIRoutes from '../routes/aiRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import { createSwaggerRouter } from './swagger';
 import { UPLOADS_DIR } from '@/infra/http/helpers/logoUpload';
@@ -53,7 +55,9 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
   const rateLimitMax = Number(process.env.RATE_LIMIT_MAX) || 300;
   const isExemptFromRateLimit = (req: Request) => {
     const path = (req.baseUrl + req.path).toLowerCase();
-    return path === '/health' || path.startsWith('/api-docs') || path.startsWith('/socket.io');
+    if (path === '/health' || path.startsWith('/socket.io')) return true;
+    if (process.env.NODE_ENV !== 'production' && path.startsWith('/api-docs')) return true;
+    return false;
   };
   app.use(
     rateLimit({ windowMs: 15 * 60 * 1000, limit: rateLimitMax, skip: isExemptFromRateLimit }),
@@ -170,6 +174,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       hashService,
       tokenService,
       auditService,
+      prisma: getPrismaClient(),
     }),
     createPushRoutes({
       prisma: getPrismaClient(),
@@ -185,27 +190,36 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       barbershopRepository,
       userBarbershopRepository,
     }),
+    createSubscriptionRoutes({
+      prisma: getPrismaClient(),
+      barbershopRepository,
+      userBarbershopRepository,
+    }),
+    createAIRoutes({
+      prisma: getPrismaClient(),
+      barbershopRepository,
+      userBarbershopRepository,
+    }),
   );
   app.use('/', healthRoutes);
-  app.use(createSwaggerRouter());
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(createSwaggerRouter());
+  }
   app.use('/uploads', express.static(UPLOADS_DIR));
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(err);
+    if (process.env.NODE_ENV === 'production') {
+      console.error(`[ERROR] ${err.message}`);
+    } else {
+      console.error(err);
+    }
 
     if (err instanceof AppError) {
       return res.status(err.status).json({ message: err.message, code: err.code });
     }
 
-    if (err instanceof Error) {
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(500).json({ message: 'Erro interno do servidor' });
-      }
-      return res.status(400).json({ message: err.message });
-    }
-
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: 'Erro interno do servidor' });
   });
 
   return app;
