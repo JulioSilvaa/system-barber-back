@@ -10,7 +10,7 @@ import IAdminRepository from '@/domain/repository/AdminRepository';
 import HashRepository from '@/domain/repository/HashRepository';
 import { ITokenService } from '@/domain/repository/TokenService';
 import { buildAuditContext } from '@/infra/http/helpers/auditContext';
-import { setAuthCookies } from '@/infra/http/helpers/authCookie';
+import { setAuthCookies, clearAuthCookies } from '@/infra/http/helpers/authCookie';
 import BcryptHashService from '@/infra/helpers/BcryptHash';
 import JwtTokenService from '@/infra/helpers/JwtTokenService';
 import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepositoryMemory';
@@ -24,6 +24,7 @@ type AdminOutputDTO = {
 };
 
 export default class AdminController {
+  private readonly adminRepository: IAdminRepository;
   private readonly authenticateAdminUseCase: AuthenticateAdminUseCase;
   private readonly createAdminUseCase: CreateAdminUseCase;
   private readonly listAdminsUseCase: ListAdminsUseCase;
@@ -35,6 +36,7 @@ export default class AdminController {
     tokenService: ITokenService = new JwtTokenService(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
   ) {
+    this.adminRepository = adminRepository;
     this.authenticateAdminUseCase = new AuthenticateAdminUseCase(
       adminRepository,
       hashService,
@@ -110,6 +112,33 @@ export default class AdminController {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       await this.deleteAdminUseCase.execute(id, buildAuditContext(req));
       return res.status(200).json({ message: 'Admin excluído com sucesso' });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  me = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adminId = req.userId;
+      if (!adminId) {
+        return res.status(401).json({ message: 'Token não fornecido' });
+      }
+
+      const admin = await this.adminRepository.findById(adminId);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin não encontrado' });
+      }
+
+      return res.status(200).json(toAdminOutput(admin));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  logout = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      clearAuthCookies(res);
+      return res.status(200).json({ message: 'Logout realizado com sucesso' });
     } catch (error) {
       next(error);
     }
