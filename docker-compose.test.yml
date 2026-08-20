@@ -1,0 +1,93 @@
+# ATTENTION: This file is for LOCAL TESTING ONLY.
+# NEVER use these credentials in production.
+name: systembarber-test
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: system-barber-postgres-test
+    environment:
+      POSTGRES_DB: systembarber_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: America/Sao_Paulo
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d systembarber_test']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: system-barber-backend-test
+    environment:
+      PORT: 3333
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@postgres-test:5432/systembarber_test
+      CORS_ORIGINS: http://localhost:3002,http://127.0.0.1:3002
+      RATE_LIMIT_MAX: '5000'
+      LOGIN_RATE_LIMIT_MAX: '10'
+      JWT_ACCESS_SECRET: e2e-access-secret
+      JWT_REFRESH_SECRET: e2e-refresh-secret
+      BCRYPT_SALT: '10'
+      TZ: America/Sao_Paulo
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    ports:
+      - '3334:3333'
+    volumes:
+      - uploads_test_data:/app/uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3333/health').then((r) => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: system-barber-tests
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres-test:5432/systembarber_test
+      JWT_ACCESS_SECRET: test-secret
+      JWT_REFRESH_SECRET: test-refresh-secret
+      BCRYPT_SALT: '10'
+      DB_DRIVER: memory
+      TZ: America/Sao_Paulo
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    profiles:
+      - test
+
+  frontend:
+    build:
+      context: ../system-barber-front
+      dockerfile: Dockerfile
+    container_name: system-barber-frontend-test
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '3002:80'
+
+volumes:
+  postgres_test_data:
+  uploads_test_data:
+
+networks:
+  default:
+    name: systembarber-test-network
