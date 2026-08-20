@@ -161,7 +161,7 @@ export function requireBarbershopSelf(req: Request, res: Response, next: NextFun
   }
 
   const barbershopId =
-    paramString(req.params.barbershopId) ?? paramString(req.params.id);
+    paramString(req.params.barbershopId) ?? paramString(req.params.id) ?? paramString(req.body?.barbershopId);
 
   if (!barbershopId || req.userId !== barbershopId) {
     return res.status(403).json({ message: 'Acesso negado' });
