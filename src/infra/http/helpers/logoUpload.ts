@@ -2,6 +2,7 @@ import { Request } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
+import { ValidationError } from '@/domain/errors';
 
 export const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 
@@ -13,7 +14,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 function fileFilter(_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void {
   const ext = path.extname(file.originalname).toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(ext)) {
-    return cb(new Error('logo must be a PNG, JPG or WEBP image'));
+    return cb(new ValidationError('logo must be a PNG, JPG or WEBP image'));
   }
   return cb(null, true);
 }
