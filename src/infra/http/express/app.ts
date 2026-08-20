@@ -219,6 +219,22 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       return res.status(err.status).json({ message: err.message, code: err.code });
     }
 
+    if (err.name === 'PrismaClientKnownRequestError') {
+      const prismaErr = err as unknown as { code: string; meta?: { target?: string[] } };
+      switch (prismaErr.code) {
+        case 'P2002':
+          return res.status(409).json({
+            message: `Registro duplicado: ${prismaErr.meta?.target?.join(', ') ?? 'campo'}`,
+          });
+        case 'P2025':
+          return res.status(404).json({ message: 'Registro não encontrado' });
+        case 'P2003':
+          return res.status(400).json({ message: 'Referência inválida' });
+        default:
+          return res.status(400).json({ message: 'Erro de validação do banco de dados' });
+      }
+    }
+
     return res.status(500).json({ message: 'Erro interno do servidor' });
   });
 
