@@ -119,6 +119,7 @@ model Appointment {
   evaluations    Evaluation[]
   financeEntries FinanceEntry[]
 
+  @@index([barbershopId, status])
   @@map("appointments")
 }
 
@@ -190,6 +191,7 @@ model Commission {
   appointment       Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
   @@index([barbershopId])
+  @@index([barbershopId, createdAt])
   @@index([barberId])
   @@index([appointmentId])
   @@map("commissions")
