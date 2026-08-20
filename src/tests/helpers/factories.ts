@@ -107,15 +107,24 @@ export function makeServiceProps(overrides: Partial<ServiceProps> = {}): Service
   };
 }
 
+export function futureDate(daysFromNow = 1, hours = 14, minutes = 0): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
 export function makeAppointmentProps(overrides: Partial<AppointmentProps> = {}): AppointmentProps {
+  const start = futureDate(1, 14);
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
   return {
     id: 'appointment-1',
     barbershopId: 'barbershop-1',
     barberId: 'user-2',
     serviceId: 'service-1',
     customerId: 'customer-1',
-    startDate: new Date('2026-08-05T14:00:00.000Z'),
-    endDate: new Date('2026-08-05T14:30:00.000Z'),
+    startDate: start,
+    endDate: end,
     status: 'SCHEDULED',
     ...overrides,
   };

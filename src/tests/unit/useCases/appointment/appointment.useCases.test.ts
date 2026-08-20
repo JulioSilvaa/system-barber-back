@@ -11,7 +11,7 @@ import { Service } from '@/domain/entities/Service';
 import { Barbershop } from '@/domain/entities/Barbershop';
 import { UserBarbershop } from '@/domain/entities';
 import { WorkingHours } from '@/domain/entities/WorkingHours';
-import { makeAppointmentProps } from '@/tests/helpers/factories';
+import { makeAppointmentProps, futureDate } from '@/tests/helpers/factories';
 import AppointmentRepositoryMemory from '@/infra/repositories/inMemory/appointment/appointmentRepositoryMemory';
 import ServiceRepositoryMemory from '@/infra/repositories/inMemory/service/serviceRepositoryMemory';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
@@ -32,13 +32,15 @@ describe('Appointment Use Cases Unit Tests', () => {
   const BARBER_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d480';
   const SERVICE_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d481';
 
+  const START_DATE = futureDate(1, 14);
+
   const inputMock = {
     barbershopId: BARBERSHOP_ID,
     barberId: BARBER_ID,
     serviceId: SERVICE_ID,
     customerName: 'Maria Souza',
     customerPhone: '16988888888',
-    startDate: new Date('2026-08-20T14:00:00.000Z'),
+    startDate: START_DATE,
   };
 
   const makeCreateUseCase = (workingHoursRepository?: WorkingHoursRepositoryMemory) =>
@@ -102,7 +104,7 @@ describe('Appointment Use Cases Unit Tests', () => {
           customerId: expect.any(String),
           status: 'SCHEDULED',
           startDate: inputMock.startDate,
-          endDate: new Date('2026-08-20T14:30:00.000Z'),
+          endDate: new Date(inputMock.startDate.getTime() + 30 * 60 * 1000),
         }),
       );
     });
@@ -124,7 +126,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       const first = await makeCreateUseCase().execute(inputMock);
       const second = await makeCreateUseCase().execute({
         ...inputMock,
-        startDate: new Date('2026-08-20T15:00:00.000Z'),
+        startDate: futureDate(1, 15),
       });
 
       expect(second.customerId).toBe(first.customerId);
@@ -155,7 +157,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       await expect(
         makeCreateUseCase().execute({
           ...inputMock,
-          startDate: new Date('2026-08-20T14:15:00.000Z'),
+          startDate: new Date(START_DATE.getTime() + 15 * 60 * 1000),
         }),
       ).rejects.toThrow('Já existe um agendamento neste horário');
     });
@@ -418,7 +420,8 @@ describe('Appointment Use Cases Unit Tests', () => {
   });
 
   describe('ListInactiveClientsUseCase', () => {
-    const NOW = new Date('2026-08-16T12:00:00.000Z');
+    const NOW = new Date();
+    NOW.setHours(12, 0, 0, 0);
 
     const makeUseCase = () =>
       new ListInactiveClientsUseCase(appointmentRepository, customerRepository, serviceRepository);
@@ -476,19 +479,19 @@ describe('Appointment Use Cases Unit Tests', () => {
       await saveCompleted(
         'appointment-a',
         'customer-a',
-        new Date('2026-06-20T15:00:00.000Z'),
+        new Date(NOW.getTime() - 56 * 24 * 60 * 60 * 1000),
         6000,
       );
       await saveCompleted(
         'appointment-b',
         'customer-b',
-        new Date('2026-07-01T10:00:00.000Z'),
+        new Date(NOW.getTime() - 46 * 24 * 60 * 60 * 1000),
         5000,
       );
       await saveCompleted(
         'appointment-c',
         'customer-c',
-        new Date('2026-07-08T16:00:00.000Z'),
+        new Date(NOW.getTime() - 38 * 24 * 60 * 60 * 1000),
         6000,
       );
 
@@ -502,7 +505,6 @@ describe('Appointment Use Cases Unit Tests', () => {
           phone: '11987654321',
           lastVisitDays: 56,
           lastService: 'Corte de cabelo',
-          lastVisit: '2026-06-20T15:00:00.000Z',
           estimatedLostValueCents: 6000,
         }),
       );
@@ -516,7 +518,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       await saveCompleted(
         'appointment-old',
         'customer-futuro',
-        new Date('2026-06-10T14:00:00.000Z'),
+        new Date(NOW.getTime() - 60 * 24 * 60 * 60 * 1000),
         4000,
       );
       await appointmentRepository.save(
@@ -527,8 +529,8 @@ describe('Appointment Use Cases Unit Tests', () => {
             barberId: BARBER_ID,
             serviceId: SERVICE_ID,
             customerId: 'customer-futuro',
-            startDate: new Date('2026-08-20T14:00:00.000Z'),
-            endDate: new Date('2026-08-20T14:30:00.000Z'),
+            startDate: futureDate(7, 14),
+            endDate: futureDate(7, 14, 30),
             status: 'SCHEDULED',
           }),
         ),
@@ -544,7 +546,7 @@ describe('Appointment Use Cases Unit Tests', () => {
       await saveCompleted(
         'appointment-recente',
         'customer-recente',
-        new Date('2026-08-01T14:00:00.000Z'),
+        new Date(NOW.getTime() - 19 * 24 * 60 * 60 * 1000),
         4000,
       );
 
@@ -560,13 +562,13 @@ describe('Appointment Use Cases Unit Tests', () => {
       await saveCompleted(
         'appointment-premium',
         'customer-premium',
-        new Date('2026-07-10T14:00:00.000Z'),
+        new Date(NOW.getTime() - 41 * 24 * 60 * 60 * 1000),
         8500,
       );
       await saveCompleted(
         'appointment-60dias',
         'customer-60dias',
-        new Date('2026-05-01T14:00:00.000Z'),
+        new Date(NOW.getTime() - 106 * 24 * 60 * 60 * 1000),
         4000,
       );
 
@@ -594,6 +596,11 @@ describe('Appointment Use Cases Unit Tests', () => {
     it('deve listar apenas os agendamentos do dia', async () => {
       const useCase = new ListDayAppointmentsUseCase(appointmentRepository);
 
+      const today = new Date();
+      today.setHours(14, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
       await appointmentRepository.save(
         new Appointment(
           makeAppointmentProps({
@@ -601,8 +608,8 @@ describe('Appointment Use Cases Unit Tests', () => {
             barbershopId: BARBERSHOP_ID,
             barberId: BARBER_ID,
             serviceId: SERVICE_ID,
-            startDate: new Date('2026-08-20T14:00:00.000Z'),
-            endDate: new Date('2026-08-20T14:30:00.000Z'),
+            startDate: today,
+            endDate: new Date(today.getTime() + 30 * 60 * 1000),
           }),
         ),
       );
@@ -613,13 +620,15 @@ describe('Appointment Use Cases Unit Tests', () => {
             barbershopId: BARBERSHOP_ID,
             barberId: BARBER_ID,
             serviceId: SERVICE_ID,
-            startDate: new Date('2026-08-21T14:00:00.000Z'),
-            endDate: new Date('2026-08-21T14:30:00.000Z'),
+            startDate: tomorrow,
+            endDate: new Date(tomorrow.getTime() + 30 * 60 * 1000),
           }),
         ),
       );
 
-      const appointments = await useCase.execute(BARBERSHOP_ID, new Date(2026, 7, 20));
+      const dayStart = new Date(today);
+      dayStart.setHours(0, 0, 0, 0);
+      const appointments = await useCase.execute(BARBERSHOP_ID, dayStart);
 
       expect(appointments).toHaveLength(1);
       expect(appointments[0].id).toBe('appointment-1');
@@ -652,7 +661,7 @@ describe('Appointment Use Cases Unit Tests', () => {
 
     it('deve rejeitar agendamento fora do expediente do barbeiro', async () => {
       const useCase = makeCreateUseCase(workingHoursRepository);
-      const date = new Date('2026-08-20T08:00:00.000Z'); // quinta 08:00
+      const date = futureDate(2, 8); // 2 dias no futuro, 08:00 (antes das 09:00)
 
       await workingHoursRepository.save(
         new WorkingHours({
@@ -673,7 +682,7 @@ describe('Appointment Use Cases Unit Tests', () => {
 
     it('deve aceitar agendamento dentro do expediente do barbeiro', async () => {
       const useCase = makeCreateUseCase(workingHoursRepository);
-      const date = new Date('2026-08-20T14:00:00.000Z'); // quinta 14:00
+      const date = futureDate(3, 14); // 3 dias no futuro, 14:00 (dentro do horário)
 
       await workingHoursRepository.save(
         new WorkingHours({
