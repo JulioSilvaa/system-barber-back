@@ -7,5 +7,10 @@ export type FeatureFlag = {
 
 export interface IFeatureFlagRepository {
   findEnabledByBarbershop(barbershopId: string): Promise<string[]>;
-  upsert(barbershopId: string, module: string, enabled: boolean, source?: string): Promise<FeatureFlag>;
+  upsert(
+    barbershopId: string,
+    module: string,
+    enabled: boolean,
+    source?: string,
+  ): Promise<FeatureFlag>;
 }

@@ -40,11 +40,36 @@ export default function createAdminRoutes(deps?: Partial<AdminRoutesDeps>) {
 
   if (deps?.prisma) {
     const dashController = new AdminDashboardController(deps.prisma);
-    router.get('/admin/dashboard', requireAuth, requireAdmin, ExpressAdapter.create(dashController.dashboard));
-    router.get('/admin/barbershops', requireAuth, requireAdmin, ExpressAdapter.create(dashController.listBarbershops));
-    router.patch('/admin/barbershops/:id/plan', requireAuth, requireAdmin, ExpressAdapter.create(dashController.updatePlan));
-    router.patch('/admin/barbershops/:id/status', requireAuth, requireAdmin, ExpressAdapter.create(dashController.updateStatus));
-    router.patch('/admin/barbershops/:id/modules', requireAuth, requireAdmin, ExpressAdapter.create(dashController.updateModules));
+    router.get(
+      '/admin/dashboard',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.dashboard),
+    );
+    router.get(
+      '/admin/barbershops',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.listBarbershops),
+    );
+    router.patch(
+      '/admin/barbershops/:id/plan',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.updatePlan),
+    );
+    router.patch(
+      '/admin/barbershops/:id/status',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.updateStatus),
+    );
+    router.patch(
+      '/admin/barbershops/:id/modules',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.updateModules),
+    );
   }
 
   return router;

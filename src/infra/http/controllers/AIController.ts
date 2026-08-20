@@ -35,8 +35,13 @@ export default class AIController {
         ? req.params.barbershopId[0]
         : req.params.barbershopId;
 
-      const { followUpDays, autoSend, messageTemplate, confirmationTemplate, cancellationTemplate } =
-        req.body ?? {};
+      const {
+        followUpDays,
+        autoSend,
+        messageTemplate,
+        confirmationTemplate,
+        cancellationTemplate,
+      } = req.body ?? {};
 
       if (followUpDays !== undefined) {
         const days = Number(followUpDays);
@@ -57,8 +62,10 @@ export default class AIController {
       if (followUpDays !== undefined) data.followUpDays = Number(followUpDays);
       if (autoSend !== undefined) data.autoSend = autoSend;
       if (messageTemplate !== undefined) data.messageTemplate = String(messageTemplate);
-      if (confirmationTemplate !== undefined) data.confirmationTemplate = String(confirmationTemplate);
-      if (cancellationTemplate !== undefined) data.cancellationTemplate = String(cancellationTemplate);
+      if (confirmationTemplate !== undefined)
+        data.confirmationTemplate = String(confirmationTemplate);
+      if (cancellationTemplate !== undefined)
+        data.cancellationTemplate = String(cancellationTemplate);
 
       if (existing) {
         const updated = await this.prisma.aiSettings.update({
@@ -103,7 +110,7 @@ export default class AIController {
       });
 
       const result = customers
-        .map((c) => {
+        .map(c => {
           const lastVisit = c.appointments[0]?.startDate;
           if (!lastVisit || lastVisit >= cutoffDate) return null;
           const lastVisitDays = Math.floor(

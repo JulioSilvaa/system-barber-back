@@ -38,9 +38,9 @@ export default class AdminDashboardController {
           }),
         ]);
 
-      const activeSubscriptions = subscriptions.filter((s) => s.status === 'ACTIVE').length;
+      const activeSubscriptions = subscriptions.filter(s => s.status === 'ACTIVE').length;
       const mrrCents = subscriptions
-        .filter((s) => s.status === 'ACTIVE')
+        .filter(s => s.status === 'ACTIVE')
         .reduce((sum, s) => sum + s.mrrCents, 0);
 
       const mrrByPlan: Record<string, number> = {};
@@ -54,13 +54,11 @@ export default class AdminDashboardController {
       const churnRatePct =
         churnBase > 0 ? Math.round((canceledLast30Days / churnBase) * 1000) / 10 : 0;
 
-      const barbershops = barbershopRows.map((b) => {
-        const enabledModules = b.featureFlags
-          .filter((f) => f.enabled)
-          .map((f) => f.module);
+      const barbershops = barbershopRows.map(b => {
+        const enabledModules = b.featureFlags.filter(f => f.enabled).map(f => f.module);
         const overriddenModules = b.featureFlags
-          .filter((f) => f.enabled && f.source === 'MANUAL')
-          .map((f) => f.module);
+          .filter(f => f.enabled && f.source === 'MANUAL')
+          .map(f => f.module);
 
         return {
           id: b.id,
@@ -106,7 +104,13 @@ export default class AdminDashboardController {
 
       if (!subscription) {
         await this.prisma.subscription.create({
-          data: { id: randomUUID(), barbershopId, plan, status: 'ACTIVE', mrrCents: plan === 'PRO' ? 4990 : 0 },
+          data: {
+            id: randomUUID(),
+            barbershopId,
+            plan,
+            status: 'ACTIVE',
+            mrrCents: plan === 'PRO' ? 4990 : 0,
+          },
         });
       } else {
         await this.prisma.subscription.update({
@@ -204,7 +208,7 @@ export default class AdminDashboardController {
         orderBy: { name: 'asc' },
       });
 
-      const result = rows.map((b) => ({
+      const result = rows.map(b => ({
         id: b.id,
         name: b.name,
         slug: b.slug,
@@ -215,10 +219,10 @@ export default class AdminDashboardController {
         plan: b.subscriptions[0]?.plan ?? 'BASIC',
         status: b.subscriptions[0]?.status ?? 'ACTIVE',
         mrrCents: b.subscriptions[0]?.mrrCents ?? 0,
-        enabledModules: b.featureFlags.filter((f) => f.enabled).map((f) => f.module),
+        enabledModules: b.featureFlags.filter(f => f.enabled).map(f => f.module),
         overriddenModules: b.featureFlags
-          .filter((f) => f.enabled && f.source === 'MANUAL')
-          .map((f) => f.module),
+          .filter(f => f.enabled && f.source === 'MANUAL')
+          .map(f => f.module),
       }));
 
       return res.status(200).json(result);

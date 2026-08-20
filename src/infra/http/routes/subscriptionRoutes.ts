@@ -3,7 +3,6 @@ import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
 import SubscriptionController from '../controllers/SubscriptionController';
 import { requireAuth, requireMembership } from '@/infra/middleware/AuthMiddleware';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
-import { IFeatureFlagRepository } from '@/domain/repository/FeatureFlagRepository';
 import IUserBarbershopRepository from '@/domain/repository/UserBarbershopRepository';
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import FeatureFlagRepositoryPrisma from '@/infra/repositories/prisma/featureFlagRepositoryPrisma';

@@ -10,7 +10,7 @@ export default class FeatureFlagRepositoryPrisma implements IFeatureFlagReposito
       where: { barbershopId, enabled: true },
       select: { module: true },
     });
-    return flags.map((f) => f.module);
+    return flags.map(f => f.module);
   }
 
   async upsert(
