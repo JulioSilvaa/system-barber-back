@@ -43,7 +43,7 @@ services:
       - '3333:3333'
     volumes:
       - uploads_data:/app/uploads
-    command: ['node', 'dist/server.js']
+    command: ['sh', '-c', 'npx prisma migrate deploy && node dist/server.js']
 
   frontend:
     build:
