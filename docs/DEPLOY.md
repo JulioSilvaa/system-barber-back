@@ -779,9 +779,9 @@ docker compose -f docker-compose.prod.yml up -d --build backend
 
 ---
 
-## 13. Backup do banco de dados
+## 12. Backup do banco de dados
 
-### 11.1 Backup manual
+### 12.1 Backup manual
 
 ```bash
 # Criar backup
@@ -791,7 +791,7 @@ docker exec sb-postgres pg_dump -U postgres systembarber > backup_$(date +%Y%m%d
 scp deploy@SEU_IP:/opt/system-barber/backup_*.sql .
 ```
 
-### 11.2 Backup automatico (cron diario)
+### 12.2 Backup automatico local (cron diario)
 
 ```bash
 # No servidor, criar script de backup
@@ -827,7 +827,205 @@ chmod +x /opt/system-barber/backup.sh
 (crontab -l 2>/dev/null; echo "0 3 * * * /opt/system-barber/backup.sh >> /opt/system-barber/backups/cron.log 2>&1") | crontab -
 ```
 
-### 11.3 Restaurar backup
+### 12.3 Backup automatico no Google Drive (recomendado)
+
+Usando **rclone** no servidor + **GitHub Actions** para sincronizar com o Google Drive.
+
+#### Passo 1: Instalar rclone na VPS
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+
+# Configurar rclone interativamente
+rclone config
+```
+
+Durante a configuracao:
+
+```
+n) New remote
+name> gdrive                          # nome da conexao
+Storage> drive                        # Google Drive
+client_id> <deixe em branco>
+client_secret> <deixe em branco>
+scope> 1                              # Full access
+root_folder_id> <deixe em branco>
+service_account_file> <deixe em branco>
+Edit advanced config> n
+Use auto config> y                    # vai abrir o navegador para autenticar
+Configure as shared drives> n
+y) Yes this is OK
+q) Quit config
+```
+
+Teste se funcionou:
+
+```bash
+rclone ls gdrive: | head -5
+```
+
+#### Passo 2: Criar pasta de backups no Google Drive
+
+```bash
+mkdir -p /opt/system-barber/backups
+```
+
+#### Passo 3: Atualizar o script de backup com upload para o Google Drive
+
+```bash
+nano /opt/system-barber/backup.sh
+```
+
+Substitua pelo conteudo:
+
+```bash
+#!/bin/bash
+# ===========================================
+# System Barber - Backup + Google Drive Sync
+# ===========================================
+set -e
+
+BACKUP_DIR="/opt/system-barber/backups"
+GDRIVE_REMOTE="gdrive"
+GDRIVE_PATH="SystemBarber/backups"
+KEEP_LOCAL=7    # manter 7 backups locais
+KEEP_REMOTE=30  # manter 30 backups no Google Drive
+
+mkdir -p "$BACKUP_DIR"
+
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/backup_$DATE.sql"
+LOG_FILE="$BACKUP_DIR/backup.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# Dump do banco
+log "Iniciando backup do banco de dados..."
+docker exec sb-postgres pg_dump -U postgres systembarber > "$BACKUP_FILE"
+
+# Comprimir
+gzip "$BACKUP_FILE"
+BACKUP_GZ="$BACKUP_FILE.gz"
+log "Backup criado: $BACKUP_GZ ($(du -h "$BACKUP_GZ" | cut -f1))"
+
+# Upload para Google Drive
+log "Enviando para Google Drive..."
+rclone copy "$BACKUP_GZ" "$GDRIVE_REMOTE:$GDRIVE_PATH/" --progress 2>&1 | tee -a "$LOG_FILE"
+
+if [ $? -eq 0 ]; then
+    log "Upload concluido com sucesso!"
+else
+    log "ERRO no upload para Google Drive!"
+    exit 1
+fi
+
+# Limpar backups locais antigos
+cd "$BACKUP_DIR"
+ls -t backup_*.sql.gz 2>/dev/null | tail -n +$((KEEP_LOCAL + 1)) | xargs -r rm
+log "Locais mantidos: $KEEP_LOCAL"
+
+# Limpar backups remotos antigos
+rclone delete "$GDRIVE_REMOTE:$GDRIVE_PATH/" \
+    --min-age "${KEEP_REMOTE}d" \
+    --include "backup_*.sql.gz" \
+    2>/dev/null || true
+log "Remotos mantidos: $KEEP_REMOTE dias"
+
+log "Backup completo!"
+```
+
+```bash
+chmod +x /opt/system-barber/backup.sh
+```
+
+#### Passo 4: Atualizar o cron
+
+```bash
+# Remover cron anterior e adicionar o novo
+(crontab -l 2>/dev/null | grep -v backup.sh; echo "0 3 * * * /opt/system-barber/backup.sh >> /opt/system-barber/backups/cron.log 2>&1") | crontab -
+```
+
+#### Passo 5: Verificar o backup automatico
+
+```bash
+# Rodar manualmente para testar
+/opt/system-barber/backup.sh
+
+# Verificar se aparece no Google Drive
+rclone ls gdrive:SystemBarber/backups/ | tail -5
+
+# Verificar o log
+cat /opt/system-barber/backups/backup.log
+```
+
+### 12.4 Backup via GitHub Actions (alternativa ao cron)
+
+Se preferir que o GitHub Actions faca o backup (com mais controle e historico):
+
+Crie `.github/workflows/backup.yml` no repo do **backend**:
+
+```yaml
+name: Database Backup
+
+on:
+  schedule:
+    # Todo dia as 3h da manha (horario de Brasilia = UTC-3 = 06:00 UTC)
+    - cron: '0 6 * * *'
+
+  workflow_dispatch:  # permite rodar manualmente
+
+permissions:
+  contents: read
+
+env:
+  GDRIVE_BACKUP_DIR: SystemBarber/backups
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Backup via SSH + Upload Google Drive
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/system-barber
+
+            DATE=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="/tmp/backup_$DATE.sql.gz"
+
+            echo "=== Dump do banco ==="
+            docker exec sb-postgres pg_dump -U postgres systembarber | gzip > "$BACKUP_FILE"
+            echo "Tamanho: $(du -h "$BACKUP_FILE" | cut -f1)"
+
+            echo "=== Upload para Google Drive ==="
+            rclone copy "$BACKUP_FILE" "gdrive:${{ env.GDRIVE_BACKUP_DIR }}/" --progress
+
+            echo "=== Limpeza de backups antigos (>${{ secrets.BACKUP_KEEP_DAYS || 30 }} dias) ==="
+            KEEP_DAYS=${{ secrets.BACKUP_KEEP_DAYS || 30 }}
+            rclone delete "gdrive:${{ env.GDRIVE_BACKUP_DIR }}/" \
+              --min-age "${KEEP_DAYS}d" \
+              --include "backup_*.sql.gz" || true
+
+            rm -f "$BACKUP_FILE"
+
+            echo "=== Backup concluido ==="
+```
+
+Adicione o secret `BACKUP_KEEP_DAYS` (opcional, padrao 30 dias) no GitHub:
+
+> `Settings` > `Secrets` > `New repository secret`
+> Nome: `BACKUP_KEEP_DAYS` | Valor: `30`
+
+### 12.5 Restaurar backup
+
+#### Restaurar do backup local
 
 ```bash
 # Copiar o arquivo .sql para o servidor
@@ -838,9 +1036,44 @@ gunzip backup_20240101_030000.sql.gz
 docker exec -i sb-postgres psql -U postgres systembarber < backup_20240101_030000.sql
 ```
 
+#### Restaurar do Google Drive
+
+```bash
+# Listar backups disponiveis no Google Drive
+rclone ls gdrive:SystemBarber/backups/ --max-depth 1
+
+# Baixar o backup desejado
+rclone copy gdrive:SystemBarber/backups/backup_20240101_030000.sql.gz /tmp/
+
+# Restaurar
+gunzip /tmp/backup_20240101_030000.sql.gz
+docker exec -i sb-postgres psql -U postgres systembarber < /tmp/backup_20240101_030000.sql
+
+# Limpar arquivo temporario
+rm /tmp/backup_20240101_030000.sql
+```
+
+### 12.6 Estrutura final dos backups
+
+```
+Google Drive/
+└── SystemBarber/
+    └── backups/
+        ├── backup_20240115_030000.sql.gz   (15 jan)
+        ├── backup_20240116_030000.sql.gz   (16 jan)
+        ├── backup_20240117_030000.sql.gz   (17 jan)
+        └── ... (ultimos 30 dias)
+
+VPS (local)/
+└── /opt/system-barber/backups/
+    ├── backup_20240115_030000.sql.gz
+    ├── backup_20240116_030000.sql.gz
+    └── ... (ultimos 7 dias)
+```
+
 ---
 
-## 14. Troubleshooting
+## 13. Troubleshooting
 
 ### Containers nao sobem
 
