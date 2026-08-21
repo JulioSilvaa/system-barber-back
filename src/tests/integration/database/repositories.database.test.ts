@@ -487,6 +487,13 @@ describe('Database Integration (PostgreSQL)', { skip: !getTestDatabaseUrl() }, (
       expect(createService.status).toBe(201);
       const serviceId = createService.body.id as string;
 
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 3);
+      if (futureDate.getDay() === 0) futureDate.setDate(futureDate.getDate() + 1);
+      futureDate.setHours(14, 0, 0, 0);
+      const startDateISO = futureDate.toISOString();
+      const dateQuery = startDateISO.slice(0, 10);
+
       const createAppointment = await request(app)
         .post(`/api/barbershops/${barbershopId}/appointments`)
         .send({
@@ -494,14 +501,14 @@ describe('Database Integration (PostgreSQL)', { skip: !getTestDatabaseUrl() }, (
           serviceId,
           customerName: 'Cliente Flow',
           customerPhone: '11988888888',
-          startDate: '2026-08-20T14:00:00.000Z',
+          startDate: startDateISO,
         });
 
       expect(createAppointment.status).toBe(201);
       expect(createAppointment.body.status).toBe('SCHEDULED');
 
       const listDay = await request(app)
-        .get(`/api/barbershops/${barbershopId}/appointments?date=2026-08-20`)
+        .get(`/api/barbershops/${barbershopId}/appointments?date=${dateQuery}`)
         .set('Authorization', `Bearer ${token}`);
 
       expect(listDay.status).toBe(200);
