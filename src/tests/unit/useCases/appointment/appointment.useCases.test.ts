@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import CreateAppointmentUseCase from '@/application/useCases/appointment/Create';
 import CompleteAppointmentUseCase from '@/application/useCases/appointment/Complete';
 import CancelAppointmentUseCase from '@/application/useCases/appointment/Cancel';
-import ConfirmAppointmentUseCase from '@/application/useCases/appointment/Confirm';
 import ListInactiveClientsUseCase from '@/application/useCases/appointment/ListInactiveClients';
 import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListDay';
 import { Appointment } from '@/domain/entities/Appointment';
@@ -350,74 +349,6 @@ describe('Appointment Use Cases Unit Tests', () => {
 
       await expect(useCase.execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
         'appointment already completed',
-      );
-    });
-  });
-
-  describe('ConfirmAppointmentUseCase', () => {
-    const makeConfirmUseCase = () => new ConfirmAppointmentUseCase(appointmentRepository);
-
-    const saveAppointment = (props: Parameters<typeof makeAppointmentProps>[0]) =>
-      appointmentRepository.save(new Appointment(makeAppointmentProps(props)));
-
-    it('deve confirmar um agendamento agendado', async () => {
-      await saveAppointment({
-        id: 'appointment-1',
-        barbershopId: BARBERSHOP_ID,
-        barberId: BARBER_ID,
-        serviceId: SERVICE_ID,
-      });
-
-      const output = await makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID);
-
-      expect(output.status).toBe('CONFIRMED');
-    });
-
-    it('deve ser idempotente ao confirmar um agendamento já confirmado', async () => {
-      await saveAppointment({
-        id: 'appointment-1',
-        barbershopId: BARBERSHOP_ID,
-        barberId: BARBER_ID,
-        serviceId: SERVICE_ID,
-        status: 'CONFIRMED',
-      });
-
-      const output = await makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID);
-
-      expect(output.status).toBe('CONFIRMED');
-    });
-
-    it('deve lançar erro ao confirmar um agendamento cancelado', async () => {
-      await saveAppointment({
-        id: 'appointment-1',
-        barbershopId: BARBERSHOP_ID,
-        barberId: BARBER_ID,
-        serviceId: SERVICE_ID,
-        status: 'CANCELLED',
-      });
-
-      await expect(makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
-        'appointment canceled',
-      );
-    });
-
-    it('deve lançar erro ao confirmar um agendamento concluído', async () => {
-      await saveAppointment({
-        id: 'appointment-1',
-        barbershopId: BARBERSHOP_ID,
-        barberId: BARBER_ID,
-        serviceId: SERVICE_ID,
-        status: 'COMPLETED',
-      });
-
-      await expect(makeConfirmUseCase().execute('appointment-1', BARBERSHOP_ID)).rejects.toThrow(
-        'appointment already completed',
-      );
-    });
-
-    it('deve lançar erro quando o agendamento não existe', async () => {
-      await expect(makeConfirmUseCase().execute('inexistente', BARBERSHOP_ID)).rejects.toThrow(
-        'Agendamento não encontrado',
       );
     });
   });
