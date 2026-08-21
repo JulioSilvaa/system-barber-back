@@ -42,10 +42,9 @@ yarn-error.log*
 Thumbs.db
 
 # ===================================
-# Documentation / Internal files
+# Internal files
 # ===================================
 plan/
-docs/
 
 # ===================================
 # Prisma
