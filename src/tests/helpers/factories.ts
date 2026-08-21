@@ -109,7 +109,11 @@ export function makeServiceProps(overrides: Partial<ServiceProps> = {}): Service
 
 export function futureDate(daysFromNow = 1, hours = 14, minutes = 0): Date {
   const d = new Date();
-  d.setDate(d.getDate() + daysFromNow);
+  let added = 0;
+  while (added < daysFromNow) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0) added++;
+  }
   d.setHours(hours, minutes, 0, 0);
   return d;
 }

@@ -13,7 +13,9 @@ function buildTestDatabaseUrl(databaseUrl: string): string {
   return url.toString();
 }
 
-export let TEST_DATABASE_URL: string | null = null;
+export function getTestDatabaseUrl(): string | null {
+  return process.env.TEST_DATABASE_URL ?? null;
+}
 
 export default async function globalSetup() {
   const adminUrl = getDatabaseUrl();
@@ -22,7 +24,7 @@ export default async function globalSetup() {
     return;
   }
 
-  TEST_DATABASE_URL = buildTestDatabaseUrl(adminUrl);
+  const testDatabaseUrl = buildTestDatabaseUrl(adminUrl);
 
   const client = new Client({ connectionString: adminUrl });
   try {
@@ -34,7 +36,7 @@ export default async function globalSetup() {
     return;
   }
 
-  const testDatabase = new URL(TEST_DATABASE_URL).pathname.replace('/', '');
+  const testDatabase = new URL(testDatabaseUrl).pathname.replace('/', '');
   const exists = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [testDatabase]);
   if (exists.rowCount === 0) {
     await client.query(`CREATE DATABASE ${testDatabase}`);
@@ -42,8 +44,10 @@ export default async function globalSetup() {
 
   await client.end();
 
+  process.env.TEST_DATABASE_URL = testDatabaseUrl;
+
   execSync('yarn prisma db push --accept-data-loss', {
     stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+    env: { ...process.env, DATABASE_URL: testDatabaseUrl },
   });
 }

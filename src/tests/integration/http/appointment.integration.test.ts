@@ -10,7 +10,11 @@ import { getAccessToken } from '@/tests/helpers/auth';
 describe('Appointment HTTP Integration', () => {
   function futureISO(days = 1, hours = 14, minutes = 0): string {
     const d = new Date();
-    d.setDate(d.getDate() + days);
+    let added = 0;
+    while (added < days) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0) added++;
+    }
     d.setHours(hours, minutes, 0, 0);
     return d.toISOString();
   }

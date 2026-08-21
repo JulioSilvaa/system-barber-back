@@ -14,10 +14,10 @@ import BcryptHashService from '@/infra/helpers/BcryptHash';
 import { createApp } from '@/infra/http/express/app';
 import { createPrismaRepositorySet, RepositorySet } from '@/infra/repositories/factory';
 import { getAccessToken } from '@/tests/helpers/auth';
-import { TEST_DATABASE_URL } from '@/tests/database/globalSetup';
+import { getTestDatabaseUrl } from '@/tests/database/globalSetup';
 import type { PrismaClient } from '@/generated/prisma/client';
 
-describe('Database Integration (PostgreSQL)', { skip: !TEST_DATABASE_URL }, () => {
+describe('Database Integration (PostgreSQL)', { skip: !getTestDatabaseUrl() }, () => {
   let prisma: PrismaClient;
   let repositories: RepositorySet;
 
@@ -45,7 +45,7 @@ describe('Database Integration (PostgreSQL)', { skip: !TEST_DATABASE_URL }, () =
   }
 
   beforeAll(() => {
-    prisma = createPrismaClient(TEST_DATABASE_URL);
+    prisma = createPrismaClient(getTestDatabaseUrl()!);
     repositories = createPrismaRepositorySet(prisma);
   });
 
@@ -414,7 +414,7 @@ describe('Database Integration (PostgreSQL)', { skip: !TEST_DATABASE_URL }, () =
       const user = await makeUser({ id: 'u-persist', ...userProps });
       await repositories.userRepository.save(user);
 
-      const secondClient = createPrismaClient(TEST_DATABASE_URL);
+      const secondClient = createPrismaClient(getTestDatabaseUrl()!);
       const secondRepos = createPrismaRepositorySet(secondClient);
 
       const found = await secondRepos.userRepository.findById('u-persist');
