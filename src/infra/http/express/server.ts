@@ -23,7 +23,10 @@ if (process.env.NODE_ENV !== 'test') {
   const repositories = createRepositorySet({ prisma });
 
   if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && process.env.ADMIN_NAME) {
-    const createAdmin = new CreateAdminUseCase(repositories.adminRepository, new BcryptHashService());
+    const createAdmin = new CreateAdminUseCase(
+      repositories.adminRepository,
+      new BcryptHashService(),
+    );
     createAdmin
       .execute({
         name: process.env.ADMIN_NAME,

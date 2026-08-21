@@ -19,7 +19,10 @@ export default class UpdateCommissionRateUseCase {
     input: UpdateCommissionRateInputDTO,
     auditCtx?: AuditContext,
   ): Promise<UserBarbershop> {
-    const membership = await this.userBarbershopRepository.findById(input.membershipId, input.barbershopId);
+    const membership = await this.userBarbershopRepository.findById(
+      input.membershipId,
+      input.barbershopId,
+    );
     if (!membership || membership.barbershopId !== input.barbershopId) {
       throw new NotFoundError('Vínculo não encontrado');
     }

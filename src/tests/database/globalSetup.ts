@@ -27,8 +27,10 @@ export default async function globalSetup() {
   const client = new Client({ connectionString: adminUrl });
   try {
     await client.connect();
-  } catch (err) {
-    console.warn('[vitest] Não foi possível conectar ao PostgreSQL — pulando setup do banco de testes.');
+  } catch {
+    console.warn(
+      '[vitest] Não foi possível conectar ao PostgreSQL — pulando setup do banco de testes.',
+    );
     return;
   }
 

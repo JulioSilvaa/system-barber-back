@@ -21,8 +21,11 @@ export default class CommissionRepositoryMemory implements ICommissionRepository
   }
 
   async findByAppointment(appointmentId: string, barbershopId: string): Promise<Commission | null> {
-    return this.commissions.find(
-      commission => commission.appointmentId === appointmentId && commission.barbershopId === barbershopId,
-    ) ?? null;
+    return (
+      this.commissions.find(
+        commission =>
+          commission.appointmentId === appointmentId && commission.barbershopId === barbershopId,
+      ) ?? null
+    );
   }
 }

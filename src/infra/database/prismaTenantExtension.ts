@@ -21,6 +21,7 @@ export function tenantExtension(ctx: TenantContext) {
     name: 'tenantIsolation' as const,
     query: {
       $allModels: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async $allOperations({ args, operation, model, query }: any) {
           if (!ctx.barbershopId) {
             return query(args);
@@ -46,7 +47,12 @@ export function tenantExtension(ctx: TenantContext) {
             args.where = { ...args.where, barbershopId: ctx.barbershopId };
           }
 
-          if (operation === 'update' || operation === 'updateMany' || operation === 'delete' || operation === 'deleteMany') {
+          if (
+            operation === 'update' ||
+            operation === 'updateMany' ||
+            operation === 'delete' ||
+            operation === 'deleteMany'
+          ) {
             if (!where || !where.barbershopId) {
               args.where = { ...args.where, barbershopId: ctx.barbershopId };
             }

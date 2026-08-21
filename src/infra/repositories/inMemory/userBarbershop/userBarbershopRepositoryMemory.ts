@@ -43,9 +43,11 @@ export default class UserBarbershopRepositoryMemory implements IUserBarbershopRe
   }
 
   async findById(id: string, barbershopId: string): Promise<UserBarbershop | null> {
-    return this.memberships.find(
-      membership => membership.id === id && membership.barbershopId === barbershopId,
-    ) ?? null;
+    return (
+      this.memberships.find(
+        membership => membership.id === id && membership.barbershopId === barbershopId,
+      ) ?? null
+    );
   }
 
   async delete(id: string): Promise<void> {

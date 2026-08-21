@@ -15,12 +15,6 @@ describe('Appointment HTTP Integration', () => {
     return d.toISOString();
   }
 
-  function todayISO(): string {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
-  }
-
   beforeEach(() => {
     process.env.BCRYPT_SALT = '10';
     process.env.JWT_ACCESS_SECRET = 'test-secret';

@@ -31,7 +31,10 @@ export default class CreateEvaluationUseCase {
       throw new ValidationError('Apenas atendimentos concluídos podem ser avaliados');
     }
 
-    const existing = await this.evaluationRepository.findByAppointment(input.appointmentId, input.barbershopId);
+    const existing = await this.evaluationRepository.findByAppointment(
+      input.appointmentId,
+      input.barbershopId,
+    );
     if (existing) {
       throw new AppError('Este atendimento já foi avaliado', 'EVALUATION_ALREADY_EXISTS');
     }
