@@ -17,7 +17,7 @@ import { getAccessToken } from '@/tests/helpers/auth';
 import { TEST_DATABASE_URL } from '@/tests/database/globalSetup';
 import type { PrismaClient } from '@/generated/prisma/client';
 
-describe('Database Integration (PostgreSQL)', () => {
+describe('Database Integration (PostgreSQL)', { skip: !TEST_DATABASE_URL }, () => {
   let prisma: PrismaClient;
   let repositories: RepositorySet;
 

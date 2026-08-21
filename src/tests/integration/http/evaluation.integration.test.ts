@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '@/infra/http/express/app';
 import { getAccessToken } from '@/tests/helpers/auth';
 
+function futureWeekdayAt10(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  d.setHours(10, 0, 0, 0);
+  return d;
+}
+
 describe('Evaluation HTTP Integration', () => {
   beforeEach(() => {
     process.env.BCRYPT_SALT = '10';
@@ -53,7 +61,7 @@ describe('Evaluation HTTP Integration', () => {
         serviceId,
         customerName: 'Cliente Avaliação',
         customerPhone: '16988887777',
-        startDate: '2026-08-20T15:00:00.000Z',
+        startDate: futureWeekdayAt10().toISOString(),
       });
     const appointmentId = (appointment.body as { id: string }).id;
 

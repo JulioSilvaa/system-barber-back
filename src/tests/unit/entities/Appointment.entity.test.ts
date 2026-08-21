@@ -54,8 +54,8 @@ describe('Appointment Entity', () => {
       const overlapping = new Appointment(
         makeAppointmentProps({
           id: 'appointment-2',
-          startDate: new Date('2026-08-05T14:15:00.000Z'),
-          endDate: new Date('2026-08-05T14:45:00.000Z'),
+          startDate: new Date(first.startDate.getTime() + 15 * 60 * 1000),
+          endDate: new Date(first.endDate.getTime() + 15 * 60 * 1000),
         }),
       );
 
@@ -68,8 +68,8 @@ describe('Appointment Entity', () => {
       const adjacent = new Appointment(
         makeAppointmentProps({
           id: 'appointment-2',
-          startDate: new Date('2026-08-05T14:30:00.000Z'),
-          endDate: new Date('2026-08-05T15:00:00.000Z'),
+          startDate: new Date(first.endDate.getTime()),
+          endDate: new Date(first.endDate.getTime() + 30 * 60 * 1000),
         }),
       );
 
@@ -81,8 +81,8 @@ describe('Appointment Entity', () => {
       const distant = new Appointment(
         makeAppointmentProps({
           id: 'appointment-2',
-          startDate: new Date('2026-08-05T16:00:00.000Z'),
-          endDate: new Date('2026-08-05T16:30:00.000Z'),
+          startDate: new Date(first.endDate.getTime() + 2 * 60 * 60 * 1000),
+          endDate: new Date(first.endDate.getTime() + 2.5 * 60 * 60 * 1000),
         }),
       );
 
