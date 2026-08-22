@@ -1,4 +1,5 @@
 import { ValidationError } from '@/domain/errors';
+import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
 
 import AuditService from '@/application/services/AuditService';
@@ -24,6 +25,7 @@ import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepo
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import type { PrismaClient } from '@/generated/prisma/client';
 
 type BarbershopOutputDTO = {
   id: string;
@@ -53,6 +55,7 @@ export default class BarbershopController {
     tokenService: ITokenService = new JwtTokenService(),
     userRepository: IUserRepository = new UserRepositoryMemory(),
     auditService: AuditService = new AuditService(new AuditRepositoryMemory()),
+    private readonly prisma?: PrismaClient,
   ) {
     this.barbershopRepository = barbershopRepository;
     this.createBarbershopUseCase = new CreateBarberShopUseCase(
@@ -89,6 +92,28 @@ export default class BarbershopController {
         },
         buildAuditContext(req),
       );
+
+      if (this.prisma) {
+        try {
+          const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          await this.prisma.barbershop.update({
+            where: { id: output.id },
+            data: { status: 'TRIAL', plan: 'BASIC', trialEndsAt },
+          });
+          await this.prisma.subscription.create({
+            data: {
+              id: randomUUID(),
+              barbershopId: output.id,
+              plan: 'BASIC',
+              status: 'TRIAL',
+              mrrCents: 0,
+              trialEndsAt,
+            },
+          });
+        } catch {
+          // subscription creation is best-effort
+        }
+      }
 
       return res.status(201).json(toBarbershopOutput(output));
     } catch (error) {

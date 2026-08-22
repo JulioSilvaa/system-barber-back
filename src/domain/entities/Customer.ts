@@ -45,28 +45,30 @@ export class Customer {
 
   private validatePhone(phone: string): void {
     if (!phone || phone.trim() === '') {
-      throw new ValidationError('Telefone do cliente é obrigatório');
+      throw new ValidationError('Informe o telefone do cliente.');
     }
 
     const digits = phone.replace(/\D/g, '');
 
     if (digits.length < 10 || digits.length > 11) {
-      throw new ValidationError('Telefone do cliente deve ter 10 ou 11 dígitos');
+      throw new ValidationError(
+        'O telefone precisa ter 10 dígitos (fixo) ou 11 dígitos (celular).',
+      );
     }
 
     if (/^(\d)\1+$/.test(digits)) {
-      throw new ValidationError(
-        'Telefone do cliente não pode ser uma sequência repetida de dígitos',
-      );
+      throw new ValidationError('O telefone não pode ser uma sequência de números iguais.');
     }
 
     const ddd = parseInt(digits.substring(0, 2), 10);
     if (ddd < 11 || ddd > 99) {
-      throw new ValidationError('DDD do telefone do cliente é inválido');
+      throw new ValidationError('DDD inválido. O DDD deve ter 2 dígitos entre 11 e 99.');
     }
 
     if (digits.length === 11 && digits[2] !== '9') {
-      throw new ValidationError('Celulares devem começar com 9 após o DDD');
+      throw new ValidationError(
+        'Celulares no Brasil começam com 9 após o DDD. Ex.: (11) 98765-4321.',
+      );
     }
   }
 

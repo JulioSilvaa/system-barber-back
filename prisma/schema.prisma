@@ -47,6 +47,10 @@ model Barbershop {
   logoUrl             String?
   reminderHoursBefore Int                  @default(24)
   isActive            Boolean              @default(true)
+  status              String               @default("TRIAL")
+  plan                String               @default("BASIC")
+  trialEndsAt         DateTime?
+  overrideMarketingModule Boolean?
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   memberships    UserBarbershop[]

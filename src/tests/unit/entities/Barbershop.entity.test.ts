@@ -94,4 +94,90 @@ describe('Barbershop Entity', () => {
       expect(() => new Barbershop(makeBarbershopProps({ password: 'SenhaForte1' }))).not.toThrow();
     });
   });
+
+  describe('hasActiveAccess', () => {
+    it('deve retornar true quando status é ACTIVE', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'ACTIVE' }));
+      expect(shop.hasActiveAccess()).toBe(true);
+    });
+
+    it('deve retornar true quando está em TRIAL dentro do prazo', () => {
+      const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const shop = new Barbershop(makeBarbershopProps({ status: 'TRIAL', trialEndsAt: future }));
+      expect(shop.hasActiveAccess()).toBe(true);
+    });
+
+    it('deve retornar false quando está em TRIAL mas expirou', () => {
+      const past = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+      const shop = new Barbershop(makeBarbershopProps({ status: 'TRIAL', trialEndsAt: past }));
+      expect(shop.hasActiveAccess()).toBe(false);
+    });
+
+    it('deve retornar false quando status é EXPIRED', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'EXPIRED' }));
+      expect(shop.hasActiveAccess()).toBe(false);
+    });
+
+    it('deve retornar false quando status é CANCELED', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'CANCELED' }));
+      expect(shop.hasActiveAccess()).toBe(false);
+    });
+  });
+
+  describe('hasMarketingModuleAccess', () => {
+    it('deve retornar true quando overrideMarketingModule é true', () => {
+      const shop = new Barbershop(
+        makeBarbershopProps({ status: 'ACTIVE', plan: 'BASIC', overrideMarketingModule: true }),
+      );
+      expect(shop.hasMarketingModuleAccess()).toBe(true);
+    });
+
+    it('deve retornar true quando está em TRIAL dentro do prazo', () => {
+      const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const shop = new Barbershop(
+        makeBarbershopProps({ status: 'TRIAL', plan: 'BASIC', trialEndsAt: future }),
+      );
+      expect(shop.hasMarketingModuleAccess()).toBe(true);
+    });
+
+    it('deve retornar true quando plano é PRO com assinatura ativa', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'ACTIVE', plan: 'PRO' }));
+      expect(shop.hasMarketingModuleAccess()).toBe(true);
+    });
+
+    it('deve retornar false quando plano é BASIC sem override e trial expirado', () => {
+      const past = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+      const shop = new Barbershop(
+        makeBarbershopProps({ status: 'EXPIRED', plan: 'BASIC', trialEndsAt: past }),
+      );
+      expect(shop.hasMarketingModuleAccess()).toBe(false);
+    });
+
+    it('deve retornar false quando plano é PRO mas trial expirou e status não é ACTIVE', () => {
+      const past = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+      const shop = new Barbershop(
+        makeBarbershopProps({ status: 'EXPIRED', plan: 'PRO', trialEndsAt: past }),
+      );
+      expect(shop.hasMarketingModuleAccess()).toBe(false);
+    });
+  });
+
+  describe('effectivePlan', () => {
+    it('deve retornar PRO quando override é true', () => {
+      const shop = new Barbershop(
+        makeBarbershopProps({ status: 'ACTIVE', plan: 'BASIC', overrideMarketingModule: true }),
+      );
+      expect(shop.effectivePlan()).toBe('PRO');
+    });
+
+    it('deve retornar PRO quando plano é PRO e ativo', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'ACTIVE', plan: 'PRO' }));
+      expect(shop.effectivePlan()).toBe('PRO');
+    });
+
+    it('deve retornar BASIC quando plano é BASIC sem override', () => {
+      const shop = new Barbershop(makeBarbershopProps({ status: 'ACTIVE', plan: 'BASIC' }));
+      expect(shop.effectivePlan()).toBe('BASIC');
+    });
+  });
 });

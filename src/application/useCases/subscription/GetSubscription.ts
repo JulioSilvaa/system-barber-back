@@ -1,19 +1,17 @@
 import { NotFoundError } from '@/domain/errors';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
-import { IFeatureFlagRepository } from '@/domain/repository/FeatureFlagRepository';
-import type { PrismaClient } from '@/generated/prisma/client';
 
 export type GetSubscriptionOutput = {
   plan: string;
+  effectivePlan: string;
   enabledModules: string[];
+  status: string;
+  trialEndsAt: string | null;
+  hasActiveAccess: boolean;
 };
 
 export default class GetSubscriptionUseCase {
-  constructor(
-    private readonly barbershopRepository: IBarbershopRepository,
-    private readonly featureFlagRepository: IFeatureFlagRepository,
-    private readonly prisma: PrismaClient,
-  ) {}
+  constructor(private readonly barbershopRepository: IBarbershopRepository) {}
 
   async execute(barbershopId: string): Promise<GetSubscriptionOutput> {
     const barbershop = await this.barbershopRepository.findById(barbershopId);
@@ -21,14 +19,22 @@ export default class GetSubscriptionUseCase {
       throw new NotFoundError('Barbearia não encontrada');
     }
 
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { barbershopId },
-      select: { plan: true, status: true },
-    });
+    const effective = barbershop.effectivePlan();
+    const hasActiveAccess = barbershop.hasActiveAccess();
 
-    const plan = subscription?.plan ?? 'BASIC';
-    const enabledModules = await this.featureFlagRepository.findEnabledByBarbershop(barbershopId);
+    const enabledModules = hasActiveAccess
+      ? effective === 'PRO'
+        ? ['COPILOT', 'WHATSAPP', 'MARKETING']
+        : ['COPILOT', 'WHATSAPP']
+      : [];
 
-    return { plan, enabledModules };
+    return {
+      plan: barbershop.plan,
+      effectivePlan: effective,
+      enabledModules,
+      status: barbershop.status,
+      trialEndsAt: barbershop.trialEndsAt?.toISOString() ?? null,
+      hasActiveAccess,
+    };
   }
 }

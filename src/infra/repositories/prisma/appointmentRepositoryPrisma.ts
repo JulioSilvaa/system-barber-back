@@ -82,7 +82,7 @@ export default class AppointmentRepositoryPrisma implements IAppointmentReposito
     const rows = await this.prisma.appointment.findMany({
       where: {
         barbershopId,
-        status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        status: { in: ['SCHEDULED'] },
         reminderSent: false,
         startDate: { gt: now, lte: horizon },
       },

@@ -1,4 +1,7 @@
 import { ValidationError } from '@/domain/errors';
+export type BarbershopStatus = 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED';
+export type BarbershopPlan = 'BASIC' | 'PRO';
+
 export type BarbershopProps = {
   id: string;
   name: string;
@@ -10,6 +13,10 @@ export type BarbershopProps = {
   isActive?: boolean;
   password: string;
   reminderHoursBefore?: number;
+  status?: BarbershopStatus;
+  plan?: BarbershopPlan;
+  trialEndsAt?: Date | null;
+  overrideMarketingModule?: boolean | null;
 };
 
 export class Barbershop {
@@ -23,6 +30,10 @@ export class Barbershop {
   public readonly isActive: boolean;
   public readonly password: string;
   public readonly reminderHoursBefore: number;
+  public readonly status: BarbershopStatus;
+  public readonly plan: BarbershopPlan;
+  public readonly trialEndsAt: Date | null;
+  public readonly overrideMarketingModule: boolean | null;
 
   constructor(props: BarbershopProps) {
     this.validateSlug(props.slug);
@@ -40,6 +51,27 @@ export class Barbershop {
     this.isActive = props.isActive ?? true;
     this.password = props.password;
     this.reminderHoursBefore = props.reminderHoursBefore ?? 24;
+    this.status = props.status ?? 'TRIAL';
+    this.plan = props.plan ?? 'BASIC';
+    this.trialEndsAt = props.trialEndsAt ?? null;
+    this.overrideMarketingModule = props.overrideMarketingModule ?? null;
+  }
+
+  hasActiveAccess(now: Date = new Date()): boolean {
+    if (this.status === 'ACTIVE') return true;
+    if (this.status === 'TRIAL' && this.trialEndsAt && now < this.trialEndsAt) return true;
+    return false;
+  }
+
+  hasMarketingModuleAccess(now: Date = new Date()): boolean {
+    if (this.overrideMarketingModule === true) return true;
+    if (this.status === 'TRIAL' && this.trialEndsAt && now < this.trialEndsAt) return true;
+    if (this.plan === 'PRO' && this.hasActiveAccess(now)) return true;
+    return false;
+  }
+
+  effectivePlan(now: Date = new Date()): BarbershopPlan {
+    return this.hasMarketingModuleAccess(now) ? 'PRO' : 'BASIC';
   }
 
   private validateSlug(slug: string): void {

@@ -70,6 +70,12 @@ export default function createAdminRoutes(deps?: Partial<AdminRoutesDeps>) {
       requireAdmin,
       ExpressAdapter.create(dashController.updateModules),
     );
+    router.patch(
+      '/admin/barbershops/:id/override-pro',
+      requireAuth,
+      requireAdmin,
+      ExpressAdapter.create(dashController.overridePro),
+    );
   }
 
   return router;

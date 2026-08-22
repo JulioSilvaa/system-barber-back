@@ -31,6 +31,7 @@ export default class AdminDashboardController {
               name: true,
               slug: true,
               isActive: true,
+              overrideMarketingModule: true,
               subscriptions: { select: { plan: true, status: true, mrrCents: true }, take: 1 },
               featureFlags: { select: { module: true, enabled: true, source: true } },
             },
@@ -65,6 +66,7 @@ export default class AdminDashboardController {
           name: b.name,
           slug: b.slug,
           isActive: b.isActive,
+          overrideMarketingModule: b.overrideMarketingModule ?? false,
           plan: b.subscriptions[0]?.plan ?? 'BASIC',
           status: b.subscriptions[0]?.status ?? 'ACTIVE',
           mrrCents: b.subscriptions[0]?.mrrCents ?? 0,
@@ -98,6 +100,14 @@ export default class AdminDashboardController {
         throw new ValidationError('plan must be BASIC or PRO');
       }
 
+      const MRR_BY_PLAN: Record<string, number> = { BASIC: 9990, PRO: 19990 };
+      const newStatus = plan === 'PRO' ? 'ACTIVE' : 'ACTIVE';
+
+      await this.prisma.barbershop.update({
+        where: { id: barbershopId },
+        data: { plan, status: newStatus },
+      });
+
       const subscription = await this.prisma.subscription.findUnique({
         where: { barbershopId },
       });
@@ -108,14 +118,15 @@ export default class AdminDashboardController {
             id: randomUUID(),
             barbershopId,
             plan,
-            status: 'ACTIVE',
-            mrrCents: plan === 'PRO' ? 4990 : 0,
+            status: newStatus,
+            mrrCents: MRR_BY_PLAN[plan] ?? 0,
+            trialEndsAt: null,
           },
         });
       } else {
         await this.prisma.subscription.update({
           where: { barbershopId },
-          data: { plan, mrrCents: plan === 'PRO' ? 4990 : 0 },
+          data: { plan, status: newStatus, mrrCents: MRR_BY_PLAN[plan] ?? 0, trialEndsAt: null },
         });
       }
 
@@ -136,7 +147,7 @@ export default class AdminDashboardController {
         }
       }
 
-      return res.status(200).json({ plan });
+      return res.status(200).json({ plan, status: newStatus });
     } catch (error) {
       next(error);
     }
@@ -246,6 +257,26 @@ export default class AdminDashboardController {
       });
 
       return res.status(200).json({ isActive });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  overridePro = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const barbershopId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const { override } = req.body ?? {};
+
+      if (typeof override !== 'boolean') {
+        throw new ValidationError('override must be a boolean');
+      }
+
+      await this.prisma.barbershop.update({
+        where: { id: barbershopId },
+        data: { overrideMarketingModule: override },
+      });
+
+      return res.status(200).json({ overrideMarketingModule: override });
     } catch (error) {
       next(error);
     }
