@@ -43,6 +43,7 @@ model Barbershop {
   email         String                 @unique
   phone         String
   password      String
+  cpfCnpj       String?
   primaryColor        String?
   logoUrl             String?
   reminderHoursBefore Int                  @default(24)

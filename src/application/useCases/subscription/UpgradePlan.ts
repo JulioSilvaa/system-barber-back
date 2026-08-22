@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
+
+import applyPlanModules from '@/application/useCases/billing/applyPlanModules';
+import type { AsaasGateway } from '@/application/useCases/billing/SubscribeBarbershop';
+import { getPlanPriceCents, isPlan, PLAN_MODULES, type Plan } from '@/config/plans';
 import { NotFoundError, ValidationError } from '@/domain/errors';
 import type { PrismaClient } from '@/generated/prisma/client';
-
-const PLAN_MODULES: Record<string, string[]> = {
-  BASIC: [],
-  PRO: ['COPILOT', 'WHATSAPP', 'MARKETING'],
-};
 
 export type UpgradePlanInput = {
   barbershopId: string;
@@ -13,14 +12,18 @@ export type UpgradePlanInput = {
 };
 
 export default class UpgradePlanUseCase {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly asaasService?: AsaasGateway | null,
+  ) {}
 
   async execute(input: UpgradePlanInput) {
-    const { barbershopId, plan } = input;
+    const { barbershopId } = input;
 
-    if (!['BASIC', 'PRO'].includes(plan)) {
+    if (!isPlan(input.plan)) {
       throw new ValidationError('Plano inválido. Use BASIC ou PRO.');
     }
+    const plan = input.plan;
 
     const barbershop = await this.prisma.barbershop.findUnique({
       where: { id: barbershopId },
@@ -35,63 +38,77 @@ export default class UpgradePlanUseCase {
       throw new ValidationError('Barbearia desativada');
     }
 
-    const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    const existing = await this.prisma.subscription.findUnique({
+    const priceCents = getPlanPriceCents(plan);
+    const subscription = await this.prisma.subscription.findUnique({
       where: { barbershopId },
     });
 
-    if (!existing) {
+    if (subscription) {
+      const data: {
+        plan: string;
+        mrrCents: number;
+        status?: string;
+        trialEndsAt?: Date;
+      } = { plan, mrrCents: priceCents };
+
+      // Trial só é definido na criação; troca de plano não reinicia o período.
+      if (!subscription.trialEndsAt) {
+        data.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      }
+      // Fora do trial, plano pago implica assinatura ativa.
+      if (
+        subscription.provider === 'ASAAS' &&
+        ['ACTIVE', 'PAST_DUE'].includes(subscription.status)
+      ) {
+        data.status = 'ACTIVE';
+      }
+
+      await this.prisma.subscription.update({ where: { barbershopId }, data });
+    } else {
       await this.prisma.subscription.create({
         data: {
           id: randomUUID(),
           barbershopId,
           plan,
-          status: 'ACTIVE',
-          mrrCents: plan === 'PRO' ? 4990 : 0,
-          trialEndsAt,
-        },
-      });
-    } else {
-      await this.prisma.subscription.update({
-        where: { barbershopId },
-        data: {
-          plan,
-          status: 'ACTIVE',
-          mrrCents: plan === 'PRO' ? 4990 : 0,
-          trialEndsAt,
+          status: 'TRIAL',
+          mrrCents: 0,
+          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
       });
     }
 
-    const modules = PLAN_MODULES[plan] ?? [];
-    for (const mod of modules) {
-      await this.prisma.featureFlag.upsert({
-        where: { barbershopId_module: { barbershopId, module: mod } },
-        create: { id: randomUUID(), barbershopId, module: mod, enabled: true, source: 'PLAN' },
-        update: { enabled: true, source: 'PLAN' },
-      });
-    }
+    await this.updateRemoteSubscriptionValue(barbershopId, plan);
 
-    const otherModules = Object.values(PLAN_MODULES)
-      .flat()
-      .filter(m => !modules.includes(m));
-
-    for (const mod of otherModules) {
-      const flag = await this.prisma.featureFlag.findUnique({
-        where: { barbershopId_module: { barbershopId, module: mod } },
-      });
-      if (flag && flag.source === 'PLAN') {
-        await this.prisma.featureFlag.update({
-          where: { id: flag.id },
-          data: { enabled: false },
-        });
-      }
-    }
+    await applyPlanModules(this.prisma, barbershopId, plan);
 
     return {
       plan,
-      trialEndsAt: trialEndsAt.toISOString(),
+      mrrCents: priceCents,
+      modules: PLAN_MODULES[plan] ?? [],
     };
+  }
+
+  private async updateRemoteSubscriptionValue(barbershopId: string, plan: Plan): Promise<void> {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { barbershopId },
+    });
+
+    if (
+      !this.asaasService ||
+      !subscription?.providerSubscriptionId ||
+      subscription.provider !== 'ASAAS' ||
+      subscription.status === 'CANCELED'
+    ) {
+      return;
+    }
+
+    try {
+      await this.asaasService.updateSubscription(subscription.providerSubscriptionId, {
+        value: getPlanPriceCents(plan) / 100,
+      });
+    } catch {
+      // Ajuste remoto é best-effort; a cobrança seguinte pode ser corrigida
+      // manualmente no painel do gateway.
+    }
   }
 }

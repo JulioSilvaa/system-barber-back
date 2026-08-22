@@ -42,6 +42,13 @@ export default function createSubscriptionRoutes(deps?: SubscriptionRoutesDeps) 
   );
 
   router.post(
+    '/barbershops/:barbershopId/subscription/subscribe',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.subscribe),
+  );
+
+  router.post(
     '/barbershops/:barbershopId/subscription/upgrade',
     requireAuth,
     requireMembership(userBarbershopRepository, barbershopRepository),
