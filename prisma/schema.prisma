@@ -62,8 +62,22 @@ model Barbershop {
   featureFlags   FeatureFlag[]
   aiSettings     AiSettings?
   pushSubscriptions PushSubscription[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("barbershops")
+}
+
+model PasswordResetToken {
+  id           String     @id @default(cuid())
+  tokenHash    String     @unique
+  barbershopId String
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([barbershopId])
+  @@map("password_reset_tokens")
 }
 
 model UserBarbershop {
