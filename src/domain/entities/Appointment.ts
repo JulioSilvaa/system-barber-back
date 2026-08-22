@@ -1,5 +1,5 @@
 import { ValidationError } from '@/domain/errors';
-export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
 export type AppointmentPaymentMethod = 'PIX' | 'CASH' | 'DEBIT' | 'CREDIT';
 
@@ -53,22 +53,6 @@ export class Appointment {
 
   public isOverlappingWith(other: Appointment): boolean {
     return this.startDate < other.endDate && this.endDate > other.startDate;
-  }
-
-  public confirm(): void {
-    if (this.status === 'CANCELLED') {
-      throw new ValidationError('appointment canceled');
-    }
-
-    if (this.status === 'COMPLETED') {
-      throw new ValidationError('appointment already completed');
-    }
-
-    if (this.status === 'CONFIRMED') {
-      return;
-    }
-
-    this.status = 'CONFIRMED';
   }
 
   public complete(payment: {

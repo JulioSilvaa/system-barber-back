@@ -86,12 +86,6 @@ export default function createAppointmentRoutes(deps?: AppointmentRoutesDeps) {
     ExpressAdapter.create(controller.inactiveClients),
   );
   router.patch(
-    '/barbershops/:barbershopId/appointments/:id/confirm',
-    requireAuth,
-    requireMembership(userBarbershopRepository, barbershopRepository),
-    ExpressAdapter.create(controller.confirm),
-  );
-  router.patch(
     '/barbershops/:barbershopId/appointments/:id/complete',
     requireAuth,
     requireMembership(userBarbershopRepository, barbershopRepository),

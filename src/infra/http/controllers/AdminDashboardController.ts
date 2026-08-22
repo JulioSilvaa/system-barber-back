@@ -4,7 +4,7 @@ import { ValidationError } from '@/domain/errors';
 import type { PrismaClient } from '@/generated/prisma/client';
 
 const PLAN_MODULES: Record<string, string[]> = {
-  BASIC: ['COPILOT', 'WHATSAPP'],
+  BASIC: [],
   PRO: ['COPILOT', 'WHATSAPP', 'MARKETING'],
 };
 
@@ -110,12 +110,17 @@ export default class AdminDashboardController {
             plan,
             status: 'ACTIVE',
             mrrCents: plan === 'PRO' ? 4990 : 0,
+            trialEndsAt: plan === 'PRO' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
           },
         });
       } else {
         await this.prisma.subscription.update({
           where: { barbershopId },
-          data: { plan, mrrCents: plan === 'PRO' ? 4990 : 0 },
+          data: {
+            plan,
+            mrrCents: plan === 'PRO' ? 4990 : 0,
+            trialEndsAt: plan === 'PRO' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+          },
         });
       }
 

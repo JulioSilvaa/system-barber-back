@@ -59,7 +59,7 @@ export default class AppointmentRepositoryMemory implements IAppointmentReposito
       .filter(
         appointment =>
           appointment.barbershopId === barbershopId &&
-          ['SCHEDULED', 'CONFIRMED'].includes(appointment.status) &&
+          appointment.status === 'SCHEDULED' &&
           !appointment.reminderSent &&
           appointment.startDate > now &&
           appointment.startDate <= horizon,

@@ -5,7 +5,6 @@ import AuditService from '@/application/services/AuditService';
 import CreateAppointmentUseCase from '@/application/useCases/appointment/Create';
 import CompleteAppointmentUseCase from '@/application/useCases/appointment/Complete';
 import CancelAppointmentUseCase from '@/application/useCases/appointment/Cancel';
-import ConfirmAppointmentUseCase from '@/application/useCases/appointment/Confirm';
 import ListInactiveClientsUseCase from '@/application/useCases/appointment/ListInactiveClients';
 import GetAvailableSlotsUseCase from '@/application/useCases/appointment/GetAvailableSlots';
 import ListDayAppointmentsUseCase from '@/application/useCases/appointment/ListDay';
@@ -52,7 +51,6 @@ export default class AppointmentController {
   private readonly createAppointmentUseCase: CreateAppointmentUseCase;
   private readonly completeAppointmentUseCase: CompleteAppointmentUseCase;
   private readonly cancelAppointmentUseCase: CancelAppointmentUseCase;
-  private readonly confirmAppointmentUseCase: ConfirmAppointmentUseCase;
   private readonly listInactiveClientsUseCase: ListInactiveClientsUseCase;
   private readonly listDayAppointmentsUseCase: ListDayAppointmentsUseCase;
   private readonly getAvailableSlotsUseCase: GetAvailableSlotsUseCase;
@@ -86,10 +84,6 @@ export default class AppointmentController {
       auditService,
     );
     this.cancelAppointmentUseCase = new CancelAppointmentUseCase(
-      appointmentRepository,
-      auditService,
-    );
-    this.confirmAppointmentUseCase = new ConfirmAppointmentUseCase(
       appointmentRepository,
       auditService,
     );
@@ -222,28 +216,6 @@ export default class AppointmentController {
           paymentMethod: body.paymentMethod,
           note: body.note,
         },
-        buildAuditContext(req),
-      );
-
-      const enriched = await this.enrich([output]);
-      emitDataChanged(barbershopId);
-      return res.status(200).json(enriched[0]);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  confirm = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const rawId = req.params.id;
-      const rawBarbershopId = req.params.barbershopId;
-      const appointmentId = Array.isArray(rawId) ? rawId[0] : rawId;
-      const barbershopId =
-        req.barbershopId ?? (Array.isArray(rawBarbershopId) ? rawBarbershopId[0] : rawBarbershopId);
-
-      const output = await this.confirmAppointmentUseCase.execute(
-        appointmentId,
-        barbershopId,
         buildAuditContext(req),
       );
 

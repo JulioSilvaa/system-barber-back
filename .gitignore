@@ -8,6 +8,7 @@ node_modules/
 # ===================================
 dist/
 requests
+docs
 
 # ===================================
 # Environment variables
@@ -64,3 +65,4 @@ src/generated/
 # Uploads
 # ===================================
 uploads/
+docs/

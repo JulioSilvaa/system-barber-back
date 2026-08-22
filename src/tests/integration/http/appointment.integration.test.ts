@@ -156,7 +156,9 @@ describe('Appointment HTTP Integration', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(
-        expect.objectContaining({ message: 'Celulares devem começar com 9 após o DDD' }),
+        expect.objectContaining({
+          message: 'Celulares no Brasil começam com 9 após o DDD. Ex.: (11) 98765-4321.',
+        }),
       );
     });
 
@@ -397,7 +399,7 @@ describe('Appointment HTTP Integration', () => {
     });
   });
 
-  describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete, cancel e confirm', () => {
+  describe('PATCH /api/barbershops/:barbershopId/appointments/:id/complete e cancel', () => {
     async function createAppointment(app: Application) {
       const barbershop = await createBarbershop(app, 'barbearia-central', 'Barbearia Central');
       const barber = await createBarber(app, barbershop.id, barbershop.token);
@@ -465,83 +467,6 @@ describe('Appointment HTTP Integration', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(expect.objectContaining({ status: 'CANCELLED' }));
-    });
-
-    it('deve confirmar um agendamento', async () => {
-      const app = createApp();
-      const { barbershop, appointment } = await createAppointment(app);
-
-      const response = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual(expect.objectContaining({ status: 'CONFIRMED' }));
-    });
-
-    it('deve ser idempotente ao confirmar um agendamento já confirmado', async () => {
-      const app = createApp();
-      const { barbershop, appointment } = await createAppointment(app);
-
-      const first = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      const second = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      expect(first.status).toBe(200);
-      expect(second.status).toBe(200);
-      expect(first.body.status).toBe('CONFIRMED');
-      expect(second.body.status).toBe('CONFIRMED');
-    });
-
-    it('deve permitir concluir um agendamento confirmado', async () => {
-      const app = createApp();
-      const { barbershop, appointment } = await createAppointment(app);
-
-      await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      const response = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/complete`)
-        .set('Authorization', `Bearer ${barbershop.token}`)
-        .send({ paidPriceCents: 4000, paymentMethod: 'PIX' });
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual(expect.objectContaining({ status: 'COMPLETED' }));
-    });
-
-    it('deve retornar 400 ao confirmar um agendamento já cancelado', async () => {
-      const app = createApp();
-      const { barbershop, appointment } = await createAppointment(app);
-
-      await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/cancel`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      const response = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/${appointment.id}/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(expect.objectContaining({ message: 'appointment canceled' }));
-    });
-
-    it('deve retornar 404 ao confirmar um agendamento inexistente', async () => {
-      const app = createApp();
-      const { barbershop } = await createAppointment(app);
-
-      const response = await request(app)
-        .patch(`/api/barbershops/${barbershop.id}/appointments/inexistente/confirm`)
-        .set('Authorization', `Bearer ${barbershop.token}`);
-
-      expect(response.status).toBe(404);
-      expect(response.body).toEqual(
-        expect.objectContaining({ message: 'Agendamento não encontrado' }),
-      );
     });
 
     it('deve retornar 400 ao concluir um agendamento já cancelado', async () => {

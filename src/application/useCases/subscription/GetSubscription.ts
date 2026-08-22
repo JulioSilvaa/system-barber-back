@@ -6,6 +6,8 @@ import type { PrismaClient } from '@/generated/prisma/client';
 export type GetSubscriptionOutput = {
   plan: string;
   enabledModules: string[];
+  status: string;
+  trialEndsAt: string | null;
 };
 
 export default class GetSubscriptionUseCase {
@@ -23,12 +25,14 @@ export default class GetSubscriptionUseCase {
 
     const subscription = await this.prisma.subscription.findUnique({
       where: { barbershopId },
-      select: { plan: true, status: true },
+      select: { plan: true, status: true, trialEndsAt: true },
     });
 
     const plan = subscription?.plan ?? 'BASIC';
+    const status = subscription?.status ?? 'ACTIVE';
+    const trialEndsAt = subscription?.trialEndsAt?.toISOString() ?? null;
     const enabledModules = await this.featureFlagRepository.findEnabledByBarbershop(barbershopId);
 
-    return { plan, enabledModules };
+    return { plan, enabledModules, status, trialEndsAt };
   }
 }
