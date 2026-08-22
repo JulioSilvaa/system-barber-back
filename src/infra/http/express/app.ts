@@ -20,6 +20,7 @@ import createEvaluationRoutes from '../routes/evaluationRoutes';
 import createPushRoutes from '../routes/pushRoutes';
 import createReportRoutes from '../routes/reportRoutes';
 import createSubscriptionRoutes from '../routes/subscriptionRoutes';
+import createWebhookRoutes from '../routes/webhookRoutes';
 import createAIRoutes from '../routes/aiRoutes';
 import healthRoutes from '../routes/healthRoutes';
 import { createSwaggerRouter } from './swagger';
@@ -57,6 +58,8 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
     const path = (req.baseUrl + req.path).toLowerCase();
     if (path === '/health' || path.startsWith('/socket.io')) return true;
     if (process.env.NODE_ENV !== 'production' && path.startsWith('/api-docs')) return true;
+    // Webhook do Asaas: origem é o gateway, não o cliente da aplicação.
+    if (path === '/api/webhooks/asaas') return true;
     return false;
   };
   app.use(
@@ -196,6 +199,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       barbershopRepository,
       userBarbershopRepository,
     }),
+    createWebhookRoutes({ prisma: getPrismaClient() }),
     createAIRoutes({
       prisma: getPrismaClient(),
       barbershopRepository,
