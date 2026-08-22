@@ -19,6 +19,7 @@ import AuditRepositoryMemory from '@/infra/repositories/inMemory/audit/auditRepo
 import BarbershopRepositoryMemory from '@/infra/repositories/inMemory/barbeshop/barbeshopRepositoryMemory';
 import UserBarbershopRepositoryMemory from '@/infra/repositories/inMemory/userBarbershop/userBarbershopRepositoryMemory';
 import UserRepositoryMemory from '@/infra/repositories/inMemory/user/userRepositoryMemory';
+import type { PrismaClient } from '@/generated/prisma/client';
 
 export interface BarbershopRoutesDeps {
   barbershopRepository: IBarbershopRepository;
@@ -27,6 +28,7 @@ export interface BarbershopRoutesDeps {
   hashService: HashRepository;
   tokenService: ITokenService;
   auditService: AuditService;
+  prisma?: PrismaClient;
 }
 
 export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDeps>) {
@@ -47,6 +49,7 @@ export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDe
     tokenService,
     userRepository,
     auditService,
+    deps?.prisma,
   );
 
   router.post('/barbershops/login', ExpressAdapter.create(controller.login));

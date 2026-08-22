@@ -41,5 +41,19 @@ export default function createSubscriptionRoutes(deps?: SubscriptionRoutesDeps) 
     ExpressAdapter.create(controller.getByBarbershop),
   );
 
+  router.post(
+    '/barbershops/:barbershopId/subscription/upgrade',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.upgrade),
+  );
+
+  router.post(
+    '/barbershops/:barbershopId/subscription/cancel',
+    requireAuth,
+    requireMembership(userBarbershopRepository, barbershopRepository),
+    ExpressAdapter.create(controller.cancel),
+  );
+
   return router;
 }

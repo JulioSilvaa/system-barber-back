@@ -119,6 +119,7 @@ export function createApp(deps?: { repositories?: RepositorySet }) {
       userBarbershopRepository,
       userRepository,
       auditService,
+      prisma: getPrismaClient(),
     }),
     createMembershipRoutes({
       userBarbershopRepository,
