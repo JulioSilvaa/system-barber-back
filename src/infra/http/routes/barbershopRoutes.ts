@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import ExpressAdapter from '@/infra/adapters/ExpressAdapter';
 import BarbershopController from '../controllers/BarbershopController';
 import { uploadLogo } from '@/infra/http/helpers/logoUpload';
@@ -34,6 +35,15 @@ export interface BarbershopRoutesDeps {
 export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDeps>) {
   const router = Router();
 
+  const passwordResetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: Number(process.env.PASSWORD_RESET_RATE_LIMIT_MAX) || 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: { message: 'Muitas solicitações. Tente novamente em 15 minutos.' },
+  });
+
   const barbershopRepository = deps?.barbershopRepository ?? new BarbershopRepositoryMemory();
   const userBarbershopRepository =
     deps?.userBarbershopRepository ?? new UserBarbershopRepositoryMemory();
@@ -53,6 +63,16 @@ export default function createBarbershopRoutes(deps?: Partial<BarbershopRoutesDe
   );
 
   router.post('/barbershops/login', ExpressAdapter.create(controller.login));
+  router.post(
+    '/barbershops/forgot-password',
+    passwordResetLimiter,
+    ExpressAdapter.create(controller.forgotPassword),
+  );
+  router.post(
+    '/barbershops/reset-password',
+    passwordResetLimiter,
+    ExpressAdapter.create(controller.resetPassword),
+  );
   router.post('/barbershops', ExpressAdapter.create(controller.create));
   router.get('/barbershops/me', requireAuth, ExpressAdapter.create(controller.me));
   router.post('/barbershops/logout', ExpressAdapter.create(controller.logout));

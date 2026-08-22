@@ -9,6 +9,9 @@ import ListBarbershopStaffUseCase from '@/application/useCases/barberShop/ListBa
 import UpdateBarbershopStatusUseCase from '@/application/useCases/barberShop/UpdateBarbershopStatus';
 import UpdateBrandingUseCase from '@/application/useCases/barberShop/UpdateBranding';
 import AuthenticateBarbershopUseCase from '@/application/useCases/auth/AuthenticateBarbershop';
+import RequestBarbershopPasswordResetUseCase from '@/application/useCases/auth/RequestBarbershopPasswordReset';
+import ResetBarbershopPasswordUseCase from '@/application/useCases/auth/ResetBarbershopPassword';
+import ConsoleEmailSender from '@/infra/services/ConsoleEmailSender';
 import { Barbershop } from '@/domain/entities';
 import { IBarbershopRepository } from '@/domain/repository/BarbershopRepository';
 import HashRepository from '@/domain/repository/HashRepository';
@@ -47,6 +50,9 @@ export default class BarbershopController {
   private readonly updateBarbershopStatusUseCase: UpdateBarbershopStatusUseCase;
   private readonly updateBrandingUseCase: UpdateBrandingUseCase;
   private readonly authenticateBarbershopUseCase: AuthenticateBarbershopUseCase;
+  private readonly hashService: HashRepository;
+  private readonly requestPasswordResetUseCase: RequestBarbershopPasswordResetUseCase | null;
+  private readonly resetPasswordUseCase: ResetBarbershopPasswordUseCase | null;
 
   constructor(
     barbershopRepository: IBarbershopRepository = new BarbershopRepositoryMemory(),
@@ -79,6 +85,13 @@ export default class BarbershopController {
       auditService,
     );
     this.updateBrandingUseCase = new UpdateBrandingUseCase(barbershopRepository, auditService);
+    this.hashService = hashService;
+    this.requestPasswordResetUseCase = prisma
+      ? new RequestBarbershopPasswordResetUseCase(prisma, new ConsoleEmailSender())
+      : null;
+    this.resetPasswordUseCase = prisma
+      ? new ResetBarbershopPasswordUseCase(prisma, hashService)
+      : null;
   }
 
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -178,6 +191,39 @@ export default class BarbershopController {
   logout = async (_req: Request, res: Response, _next: NextFunction) => {
     clearAuthCookies(res);
     return res.status(204).send();
+  };
+
+  forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!this.requestPasswordResetUseCase) {
+        return res.status(503).json({ message: 'Redefinição de senha indisponível' });
+      }
+
+      await this.requestPasswordResetUseCase.execute({ email: req.body.email });
+
+      return res.status(200).json({
+        message: 'Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!this.resetPasswordUseCase) {
+        return res.status(503).json({ message: 'Redefinição de senha indisponível' });
+      }
+
+      await this.resetPasswordUseCase.execute({
+        token: req.body.token,
+        password: req.body.password,
+      });
+
+      return res.status(200).json({ message: 'Senha redefinida com sucesso.' });
+    } catch (error) {
+      next(error);
+    }
   };
 
   me = async (req: Request, res: Response, next: NextFunction) => {
